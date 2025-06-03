@@ -26,6 +26,7 @@ def parse_args():
     parser.add_argument('--pretrain', type=int, default=0, help='whether we use pretrained weight or not')
     parser.add_argument('--seed', type=int, default=2020, help='random seed')
     parser.add_argument('--model', type=str, default='uspec', help='rec-model, support [cf, uspec]')
+    parser.add_argument('--m_type', type=str, default='single', help='sinle or double, single for only positive similarity, double for both positive and negative similarity')
     parser.add_argument('--filter', type=str, default='u', help='u, i, and ui')
     parser.add_argument('--verbose', type=int, default=0, help='0 for silent, 1 for verbose')
     parser.add_argument('--a_fold', type=int,default=100, help="the fold num used to split large adj matrix, like gowalla")

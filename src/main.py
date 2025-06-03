@@ -15,7 +15,11 @@ from tqdm import tqdm
 import time
 import register
 from register import dataset
-from model_single import UniversalSpectralCF
+
+if world.config['m_type'] == 'single':
+    from model_single import UniversalSpectralCF
+else:
+    from model_double import UniversalSpectralCF
 
 import warnings
 warnings.filterwarnings("ignore", message="Can't initialize NVML")
@@ -53,7 +57,7 @@ total_time = time.time() - training_start
 
 # Display final results
 print("\n" + "="*70)
-print(f"              FINAL RESULTS (SIMPLIFIED MSE TRAINING) - {world.config['dataset']}, filter - {world.config['filter']}")
+print(f"              FINAL RESULTS (SIMPLIFIED MSE TRAINING) - {world.config['dataset']}, filter - {world.config['filter']}, {world.config['m_type']}")
 print("="*70)
 print(f"\033[91mFinal Results: Recall@20={final_results['recall'][0]:.6f}, NDCG@20={final_results['ndcg'][0]:.6f}, Precision@20={final_results['precision'][0]:.6f}\033[0m")
 print(f"Total experiment time: {total_time:.2f}s")

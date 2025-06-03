@@ -44,6 +44,7 @@ config['verbose']= args.verbose
 config['A_split'] = False
 config['A_n_fold'] = args.a_fold
 config['n_epoch_eval'] = args.n_epoch_eval
+config['m_type'] = args.m_type
 
 GPU = torch.cuda.is_available()
 device = torch.device('cuda' if GPU else "cpu")
