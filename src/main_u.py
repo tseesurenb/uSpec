@@ -48,7 +48,8 @@ total_time = time.time() - training_start
 print("\n" + "="*70)
 print("              FINAL RESULTS (SIMPLIFIED MSE TRAINING)")
 print("="*70)
-print(f"Final Results: Recall@20={final_results['recall'][0]:.6f}, NDCG@20={final_results['ndcg'][0]:.6f}, Precision@20={final_results['precision'][0]:.6f}")
+#print(f"Final Results: Recall@20={final_results['recall'][0]:.6f}, NDCG@20={final_results['ndcg'][0]:.6f}, Precision@20={final_results['precision'][0]:.6f}")
+print(f"\033[91mFinal Results: Recall@20={final_results['recall'][0]:.6f}, NDCG@20={final_results['ndcg'][0]:.6f}, Precision@20={final_results['precision'][0]:.6f}\033[0m")
 print(f"Total experiment time: {total_time:.2f}s")
 print("="*70)
 
