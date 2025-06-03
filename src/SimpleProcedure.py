@@ -205,11 +205,12 @@ def Test_Simple(dataset, model, epoch, multicore=0):
     
     eval_time = time() - start_time
     print(f"Evaluation completed in {eval_time:.2f}s")
-    print(f"Recall@20: {results['recall'][0]:.6f}, NDCG@20: {results['ndcg'][0]:.6f}, Precision@20: {results['precision'][0]:.6f}")
+    #print(f"Recall@20: {results['recall'][0]:.6f}, NDCG@20: {results['ndcg'][0]:.6f}, Precision@20: {results['precision'][0]:.6f}")
+    print(f"\033[91mRecall@20: {results['recall'][0]:.6f}, NDCG@20: {results['ndcg'][0]:.6f}, Precision@20: {results['precision'][0]:.6f}\033[0m")
     
     return results
 
-def train_universal_spectral_simple(dataset, model, config, total_epochs=15):
+def train_universal_spectral_simple(dataset, model, config, total_epochs=15, verbose = False):
     """
     ULTRA-FAST training procedure for Universal Spectral CF
     Direct MSE on rating matrix - optimized for speed!
@@ -233,9 +234,10 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15):
         epoch_time = time() - epoch_start
         
         # Print progress every 5 epochs only
-        if epoch % 5 == 0 or epoch == total_epochs - 1:
-            print(f"\nEpoch {epoch+1}/{total_epochs}: {train_info}")
-            model.debug_filter_learning()
+        if verbose:
+            if epoch % 5 == 0 or epoch == total_epochs - 1:
+                print(f"\nEpoch {epoch+1}/{total_epochs}: {train_info}")
+                model.debug_filter_learning()
         
         # Quick evaluation only at the end and middle
         if epoch == total_epochs // 2 or epoch == total_epochs - 1:
