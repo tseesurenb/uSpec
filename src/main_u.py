@@ -19,11 +19,11 @@ from model import UniversalSpectralCF
 print(f"Device: {world.device}")
 
 # Optimized configuration for faster training with direct MSE
-config = world.config.copy()
-config['filter_order'] = 2      # Simple filters for speed
-config['n_eigen'] = 20          # Reduced eigenvalues for speed  
-config['lr'] = 0.01             # Higher learning rate for direct MSE
-config['epochs'] = 15           # Very few epochs needed with direct MSE
+# config = world.config.copy()
+# config['filter_order'] = 2      # Simple filters for speed
+# config['n_eigen'] = 20          # Reduced eigenvalues for speed  
+# config['lr'] = 0.01             # Higher learning rate for direct MSE
+# config['epochs'] = 15           # Very few epochs needed with direct MSE
 
 print("Creating Universal Spectral CF model...")
 model_start = time.time()
