@@ -258,6 +258,94 @@ def test(dataset, model, epoch, multicore=0):
     
     return results
 
+def train_universal_spectral(dataset, model, config, total_epochs=15, verbose=1):
+    """
+    FIXED: Better evaluation schedule and monitoring
+    """
+    print("="*70)
+    print("STARTING ULTRA-FAST DIRECT MSE TRAINING")
+    print("="*70)
+    
+    # Initialize MSE loss
+    mse_loss = MSELoss(model, config)
+    
+    # Training history for plotting
+    loss_history = []
+    recall_history = []
+    precision_history = []
+    ndcg_history = []
+    
+    # Training loop with progress tracking
+    best_recall = 0.0
+    training_start = time()
+    
+    for epoch in tqdm(range(total_epochs), desc="Training Progress"):
+        epoch_start = time()
+        
+        # Training step
+        avg_loss, train_info = train(dataset, model, mse_loss, epoch)
+        loss_history.append(avg_loss)
+        epoch_time = time() - epoch_start
+        
+        # Print progress every 5 epochs only
+        if verbose == 1:
+            if epoch % 5 == 0 or epoch == total_epochs - 1:
+                print(f"\nEpoch {epoch+1}/{total_epochs}: {train_info}")
+                model.debug_filter_learning()
+        
+        # FIXED: More frequent evaluation to track training progress
+        n_epoch_eval = config.get('n_epoch_eval', 5)  # Default every 5 epochs
+        if (epoch + 1) % n_epoch_eval == 0 or epoch == total_epochs - 1:
+        #if epoch == total_epochs // 3 or epoch == 2 * total_epochs // 3 or epoch == total_epochs - 1:
+            print(f"\n[QUICK EVAL - Epoch {epoch+1}]")
+            results = test(dataset, model, epoch, world.config['multicore'])
+            
+            # Store metrics for plotting
+            recall_history.append(results['recall'][0])
+            precision_history.append(results['precision'][0])
+            ndcg_history.append(results['ndcg'][0])
+            
+            # Track best performance
+            current_recall = results['recall'][0]
+            if current_recall > best_recall:
+                best_recall = current_recall
+                print(f"✅ New best recall: {best_recall:.6f}")
+            
+            # Early stopping if performance degrades significantly
+            if len(recall_history) > 1 and current_recall < 0.7 * max(recall_history):
+                print(f"⚠️  Performance dropped significantly, consider stopping early")
+    
+    total_time = time() - training_start
+    print(f"\n" + "="*70)
+    print("ULTRA-FAST TRAINING COMPLETED!")
+    print(f"Total training time: {total_time:.2f}s")
+    print(f"Best recall achieved: {best_recall:.6f}")
+    print("="*70)
+    
+    # Save training plots
+    save_training_plots(loss_history, recall_history, precision_history, ndcg_history)
+    
+    return model
+
+# Convenience function for main_u.py
+def train_and_evaluate(dataset, model, config):
+    """
+    One-line training and evaluation for main_u.py
+    """
+    # Training with the epochs from config
+    trained_model = train_universal_spectral(
+        dataset, model, config, 
+        total_epochs=config.get('epochs', 15),  # Use config epochs
+        verbose=config.get('verbose', 1)  # Use config verbosity
+    )
+    
+    # Final comprehensive evaluation
+    print("\n[FINAL COMPREHENSIVE EVALUATION - ALL USERS, ALL ITEMS]")
+    final_results = test(dataset, trained_model, -1, world.config['multicore'])
+    
+    return trained_model, final_results
+
+
 def save_training_plots(loss_history, recall_history, precision_history, ndcg_history, save_dir="./plots"):
     """
     Save training plots: loss, recall vs precision, and NDCG
@@ -341,88 +429,3 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
             plt.close()
     
     plt.close('all')  # Close all figures to free memory
-
-def train_universal_spectral(dataset, model, config, total_epochs=15, verbose=1):
-    """
-    FIXED: Better evaluation schedule and monitoring
-    """
-    print("="*70)
-    print("STARTING ULTRA-FAST DIRECT MSE TRAINING")
-    print("="*70)
-    
-    # Initialize MSE loss
-    mse_loss = MSELoss(model, config)
-    
-    # Training history for plotting
-    loss_history = []
-    recall_history = []
-    precision_history = []
-    ndcg_history = []
-    
-    # Training loop with progress tracking
-    best_recall = 0.0
-    training_start = time()
-    
-    for epoch in tqdm(range(total_epochs), desc="Training Progress"):
-        epoch_start = time()
-        
-        # Training step
-        avg_loss, train_info = train(dataset, model, mse_loss, epoch)
-        loss_history.append(avg_loss)
-        epoch_time = time() - epoch_start
-        
-        # Print progress every 5 epochs only
-        if verbose == 1:
-            if epoch % 5 == 0 or epoch == total_epochs - 1:
-                print(f"\nEpoch {epoch+1}/{total_epochs}: {train_info}")
-                model.debug_filter_learning()
-        
-        # FIXED: More frequent evaluation to track training progress
-        if epoch == total_epochs // 3 or epoch == 2 * total_epochs // 3 or epoch == total_epochs - 1:
-            print(f"\n[QUICK EVAL - Epoch {epoch+1}]")
-            results = test(dataset, model, epoch, world.config['multicore'])
-            
-            # Store metrics for plotting
-            recall_history.append(results['recall'][0])
-            precision_history.append(results['precision'][0])
-            ndcg_history.append(results['ndcg'][0])
-            
-            # Track best performance
-            current_recall = results['recall'][0]
-            if current_recall > best_recall:
-                best_recall = current_recall
-                print(f"✅ New best recall: {best_recall:.6f}")
-            
-            # Early stopping if performance degrades significantly
-            if len(recall_history) > 1 and current_recall < 0.7 * max(recall_history):
-                print(f"⚠️  Performance dropped significantly, consider stopping early")
-    
-    total_time = time() - training_start
-    print(f"\n" + "="*70)
-    print("ULTRA-FAST TRAINING COMPLETED!")
-    print(f"Total training time: {total_time:.2f}s")
-    print(f"Best recall achieved: {best_recall:.6f}")
-    print("="*70)
-    
-    # Save training plots
-    save_training_plots(loss_history, recall_history, precision_history, ndcg_history)
-    
-    return model
-
-# Convenience function for main_u.py
-def train_and_evaluate(dataset, model, config):
-    """
-    One-line training and evaluation for main_u.py
-    """
-    # Training with the epochs from config
-    trained_model = train_universal_spectral(
-        dataset, model, config, 
-        total_epochs=config.get('epochs', 15),  # Use config epochs
-        verbose=config.get('verbose', 1)  # Use config verbosity
-    )
-    
-    # Final comprehensive evaluation
-    print("\n[FINAL COMPREHENSIVE EVALUATION - ALL USERS, ALL ITEMS]")
-    final_results = test(dataset, trained_model, -1, world.config['multicore'])
-    
-    return trained_model, final_results

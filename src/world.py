@@ -43,6 +43,7 @@ config['spectral_reg'] = 1e-5  # Regularization for filter coefficients
 config['verbose']= args.verbose
 config['A_split'] = False
 config['A_n_fold'] = args.a_fold
+config['n_epoch_eval'] = args.n_epoch_eval
 
 GPU = torch.cuda.is_available()
 device = torch.device('cuda' if GPU else "cpu")

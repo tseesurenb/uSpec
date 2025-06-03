@@ -29,5 +29,7 @@ def parse_args():
     parser.add_argument('--filter', type=str, default='u', help='u, i, and ui')
     parser.add_argument('--verbose', type=int, default=0, help='0 for silent, 1 for verbose')
     parser.add_argument('--a_fold', type=int,default=100, help="the fold num used to split large adj matrix, like gowalla")
+    parser.add_argument('--n_epoch_eval', type=int, default=10, help='number of epochs to evaluate the model during training')
+    
     
     return parser.parse_args()
