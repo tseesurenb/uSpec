@@ -25,8 +25,12 @@ print('===========end===================')
 #     'lgn': model.LightGCN
 # }
 
+# MODELS = {
+#     'mf': model.PureMF,
+#     'lgn': model.LightGCN,
+#     'universal-spectral': model.UniversalSpectralCF  # Add this line
+# }
+
 MODELS = {
-    'mf': model.PureMF,
-    'lgn': model.LightGCN,
     'universal-spectral': model.UniversalSpectralCF  # Add this line
 }

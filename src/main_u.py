@@ -20,15 +20,23 @@ print(f"Device: {world.device}")
 
 # Optimized configuration for faster training with direct MSE
 config = world.config.copy()
-#config['filter_order'] = 2      # Simple filters for speed
-#config['n_eigen'] = 20          # Reduced eigenvalues for speed  
-#config['lr'] = 0.01             # Higher learning rate for direct MSE
-#config['epochs'] =            # Very few epochs needed with direct MSE
+config['filter_order'] = 2      # Simple filters for speed
+config['n_eigen'] = 20          # Reduced eigenvalues for speed  
+config['lr'] = 0.01             # Higher learning rate for direct MSE
+config['epochs'] = 15           # Very few epochs needed with direct MSE
 
 print("Creating Universal Spectral CF model...")
 model_start = time.time()
-Recmodel = UniversalSpectralCF(config, dataset)
-Recmodel = Recmodel.to(world.device)
+
+# Get the adjacency matrix
+adj_mat = dataset.UserItemNet.tolil()
+
+# Create the model with proper config
+Recmodel = UniversalSpectralCF(adj_mat, config)
+
+# Initialize the model (precompute eigendecompositions)
+Recmodel.train()
+
 print(f"Model created in {time.time() - model_start:.2f}s")
 
 print("Initialized UniversalSpectralCF with direct MSE training (no negative sampling)")
@@ -46,9 +54,8 @@ total_time = time.time() - training_start
 
 # Display final results
 print("\n" + "="*70)
-print("              FINAL RESULTS (SIMPLIFIED MSE TRAINING)")
+print(f"              FINAL RESULTS (SIMPLIFIED MSE TRAINING) - {config['dataset']}, filter - {config['filter']}")
 print("="*70)
-#print(f"Final Results: Recall@20={final_results['recall'][0]:.6f}, NDCG@20={final_results['ndcg'][0]:.6f}, Precision@20={final_results['precision'][0]:.6f}")
 print(f"\033[91mFinal Results: Recall@20={final_results['recall'][0]:.6f}, NDCG@20={final_results['ndcg'][0]:.6f}, Precision@20={final_results['precision'][0]:.6f}\033[0m")
 print(f"Total experiment time: {total_time:.2f}s")
 print("="*70)

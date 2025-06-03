@@ -23,7 +23,14 @@ class SimpleMSELoss:
         self.model = model
         self.lr = config['lr']
         self.weight_decay = config.get('decay', 1e-4)
-        self.opt = torch.optim.Adam(model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        
+        # Handle different model types
+        if hasattr(model, 'parameters'):
+            # PyTorch nn.Module model
+            self.opt = torch.optim.Adam(model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        else:
+            # Custom model with built-in optimizer
+            self.opt = None  # Model handles its own optimization
     
     def compute_loss(self, users, target_ratings):
         """
@@ -31,29 +38,45 @@ class SimpleMSELoss:
         Much simpler - no negative sampling needed!
         """
         # Get all predicted ratings for the batch of users
-        predicted_ratings = self.model.getUsersRating(users)
+        if hasattr(self.model, 'getUsersRating'):
+            # Use the standard interface
+            predicted_ratings = torch.from_numpy(self.model.getUsersRating(users.cpu().numpy(), world.dataset))
+        else:
+            predicted_ratings = self.model.getUsersRating(users)
+        
+        # Ensure it's on the right device
+        if isinstance(predicted_ratings, np.ndarray):
+            predicted_ratings = torch.from_numpy(predicted_ratings).to(world.device)
         
         # Compute MSE loss only on observed interactions
         mse_loss = torch.mean((predicted_ratings - target_ratings) ** 2)
         
-        # Add small regularization on filter coefficients
-        reg_loss = (self.model.user_filter.coeffs.norm(2).pow(2) + 
-                   self.model.item_filter.coeffs.norm(2).pow(2)) * 1e-6
+        # Add small regularization on filter coefficients if available
+        reg_loss = 0.0
+        if hasattr(self.model, 'user_filter') and hasattr(self.model.user_filter, 'coeffs'):
+            reg_loss += self.model.user_filter.coeffs.norm(2).pow(2) * 1e-6
+        if hasattr(self.model, 'item_filter') and hasattr(self.model.item_filter, 'coeffs'):
+            reg_loss += self.model.item_filter.coeffs.norm(2).pow(2) * 1e-6
         
         return mse_loss + reg_loss
     
     def train_step(self, users, target_ratings):
         """Single training step - much simpler!"""
-        self.opt.zero_grad()
-        loss = self.compute_loss(users, target_ratings)
-        loss.backward()
-        self.opt.step()
-        
-        # Invalidate the model's cache since parameters changed
-        if hasattr(self.model, '_invalidate_cache'):
-            self.model._invalidate_cache()
-        
-        return loss.cpu().item()
+        if self.opt is not None:
+            # PyTorch model
+            self.opt.zero_grad()
+            loss = self.compute_loss(users, target_ratings)
+            loss.backward()
+            self.opt.step()
+            
+            # Invalidate the model's cache since parameters changed
+            if hasattr(self.model, '_invalidate_cache'):
+                self.model._invalidate_cache()
+            
+            return loss.cpu().item()
+        else:
+            # Custom model with built-in training
+            return self.model.train_step(users.cpu().numpy(), target_ratings.cpu().numpy())
 
 def create_target_ratings(dataset, users):
     """
@@ -77,35 +100,66 @@ def create_target_ratings(dataset, users):
 
 def MSE_train_simple(dataset, model, loss_class, epoch):
     """
-    SUPER OPTIMIZED MSE training - focus on speed
+    Comprehensive MSE training with proper user coverage
     """
     model.train()
     mse_loss = loss_class
     
-    # MUCH MORE AGGRESSIVE optimization for speed
-    n_batch = 3  # Only 3 batches per epoch!
-    batch_size = 64  # Very small batches
+    n_users = dataset.n_users
+    batch_size = 256  # Reasonable batch size
+    
+    # Strategy: Cycle through ALL users over multiple epochs
+    # This ensures every user is seen during training
+    users_per_epoch = min(n_users, max(1000, n_users // 5))  # At least 1000 users per epoch
+    n_batch = users_per_epoch // batch_size
     
     total_loss = 0.0
     start_time = time()
     
+    # Create a more systematic sampling approach
+    # Option A: Sequential sampling with random shuffle
+    epoch_offset = (epoch * users_per_epoch) % n_users
+    
     for batch_idx in range(n_batch):
-        # Sample random users
-        users = np.random.randint(0, dataset.n_users, batch_size)
-        users = torch.LongTensor(users).to(world.device)
+        # Sequential sampling with wraparound
+        start_idx = (epoch_offset + batch_idx * batch_size) % n_users
+        end_idx = start_idx + batch_size
         
-        # Create target ratings (1.0 for positive, 0.0 for negative)
-        target_ratings = create_target_ratings(dataset, users.cpu().numpy())
+        if end_idx <= n_users:
+            user_indices = np.arange(start_idx, end_idx)
+        else:
+            # Wraparound case
+            user_indices = np.concatenate([
+                np.arange(start_idx, n_users),
+                np.arange(0, end_idx - n_users)
+            ])
+        
+        # Add some randomization to avoid order effects
+        np.random.shuffle(user_indices)
+        
+        users = torch.LongTensor(user_indices).to(world.device)
+        
+        # Create target ratings
+        target_ratings = create_target_ratings(dataset, user_indices)
         target_ratings = target_ratings.to(world.device)
         
         # Training step
         batch_loss = mse_loss.train_step(users, target_ratings)
         total_loss += batch_loss
     
+    # Ensure we have at least one batch
+    if n_batch == 0:
+        n_batch = 1
+        users = torch.LongTensor(np.random.choice(n_users, min(batch_size, n_users), replace=False)).to(world.device)
+        target_ratings = create_target_ratings(dataset, users.cpu().numpy())
+        target_ratings = target_ratings.to(world.device)
+        batch_loss = mse_loss.train_step(users, target_ratings)
+        total_loss = batch_loss
+    
     avg_loss = total_loss / n_batch
     training_time = time() - start_time
     
-    return avg_loss, f"MSE_loss: {avg_loss:.4f} | Time: {training_time:.2f}s"
+    return avg_loss, f"MSE_loss: {avg_loss:.4f} | Batches: {n_batch} | Users/epoch: {users_per_epoch} | Coverage: {100*users_per_epoch/n_users:.1f}% | Time: {training_time:.2f}s"
 
 def test_one_batch_simple(X):
     """Same as original but simplified"""
@@ -129,7 +183,7 @@ def Test_Simple(dataset, model, epoch, multicore=0):
     u_batch_size = world.config['test_u_batch_size']
     testDict = dataset.testDict
     
-    model.eval()
+    #model.eval()
     max_K = max(world.topks)
     
     results = {'precision': np.zeros(len(world.topks)),

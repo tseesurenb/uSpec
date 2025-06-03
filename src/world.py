@@ -60,6 +60,8 @@ config['dataset'] = args.dataset
 config['s_temp'] = args.s_temp
 config['mode'] = args.mode
 config['dySim_n_layers']= args.layer
+config['epochs']= args.epochs
+config['filter']= args.filter
 # Add configuration for Universal Spectral CF in world.py (add these to config dict)
 config['filter_order'] = 4  # Polynomial order for spectral filters
 config['spectral_reg'] = 1e-5  # Regularization for filter coefficients
