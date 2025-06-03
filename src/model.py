@@ -1,7 +1,7 @@
 '''
 Created on June 3, 2025
-Pytorch Implementation of uSpec in
-Batsuuri. Tse et al. uSpec: Universal Spectral Collaborative Filtering
+Pytorch Implementation of uSpec with Positive and Negative Similarities
+Extended from Universal Spectral Collaborative Filtering
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -59,17 +59,16 @@ class UniversalSpectralFilter(nn.Module):
                 T_prev, T_curr = T_curr, T_next
         
         # FIXED: Use exponential-like activation to match old model
-        # The old model used exp(-eigenvals * 2.0), so we mimic this behavior
         filter_response = torch.exp(-torch.abs(filter_response)) + 1e-6
         
         return filter_response
 
 class UniversalSpectralCF(nn.Module):
     """
-    FIXED: Now inherits from nn.Module for proper parameter handling
+    Universal Spectral CF with Positive and Negative Similarities
     """
     def __init__(self, adj_mat, config=None):
-        super().__init__()  # FIXED: Now properly inherits from nn.Module
+        super().__init__()
         
         self.adj_mat = adj_mat
         self.config = config if config else {}
@@ -88,122 +87,208 @@ class UniversalSpectralCF(nn.Module):
         self.register_buffer('adj_tensor', torch.tensor(adj_dense, dtype=torch.float32))
         self.n_users, self.n_items = self.adj_tensor.shape
         
-        # FIXED: Use the SAME normalization as old model
+        # Normalization for positive similarities
         row_sums = self.adj_tensor.sum(dim=1, keepdim=True) + 1e-8
         col_sums = self.adj_tensor.sum(dim=0, keepdim=True) + 1e-8
         self.register_buffer('norm_adj', self.adj_tensor / torch.sqrt(row_sums) / torch.sqrt(col_sums))
         
+        # Create binary interaction matrix for negative similarities
+        binary_adj = (self.adj_tensor > 0).float()
+        complement_adj = 1 - binary_adj
+        
+        # Normalize complement matrix for negative similarities
+        neg_row_sums = complement_adj.sum(dim=1, keepdim=True) + 1e-8
+        neg_col_sums = complement_adj.sum(dim=0, keepdim=True) + 1e-8
+        self.register_buffer('neg_norm_adj', complement_adj / torch.sqrt(neg_row_sums) / torch.sqrt(neg_col_sums))
+        
         # Trainable filter modules (will be set in _initialize_model)
-        self.user_filter = None
-        self.item_filter = None
+        self.user_pos_filter = None
+        self.user_neg_filter = None
+        self.item_pos_filter = None
+        self.item_neg_filter = None
         
         # Initialize the model
         self._initialize_model()
     
     def _initialize_model(self):
-        """Initialize eigendecompositions and filters"""
+        """Initialize eigendecompositions and filters for both positive and negative similarities"""
         start = time.time()
         
-        print(f"Computing eigendecompositions for filter type: {self.filter}")
+        print(f"Computing positive and negative eigendecompositions for filter type: {self.filter}")
         
-        # Compute similarity matrices
-        user_sim = self.norm_adj @ self.norm_adj.t()
-        item_sim = self.norm_adj.t() @ self.norm_adj
+        # Compute positive similarity matrices
+        user_pos_sim = self.norm_adj @ self.norm_adj.t()
+        item_pos_sim = self.norm_adj.t() @ self.norm_adj
         
-        # Only compute eigendecompositions for selected filters
+        # Compute negative similarity matrices
+        user_neg_sim = self.neg_norm_adj @ self.neg_norm_adj.t()
+        item_neg_sim = self.neg_norm_adj.t() @ self.neg_norm_adj
+        
+        # Initialize positive and negative filters for users
         if self.filter in ['u', 'ui']:
-            user_sim_np = user_sim.cpu().numpy()
+            # Positive user similarities
+            user_pos_sim_np = user_pos_sim.cpu().numpy()
             k_user = min(self.n_eigen, self.n_users - 2)
             try:
-                eigenvals, eigenvecs = eigsh(sp.csr_matrix(user_sim_np), k=k_user, which='LM')
-                self.register_buffer('user_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
-                self.register_buffer('user_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
-                self.user_filter = UniversalSpectralFilter(self.filter_order)
-                print(f"User eigendecomposition: {k_user} components")
+                eigenvals, eigenvecs = eigsh(sp.csr_matrix(user_pos_sim_np), k=k_user, which='LM')
+                self.register_buffer('user_pos_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
+                self.register_buffer('user_pos_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
+                self.user_pos_filter = UniversalSpectralFilter(self.filter_order)
+                print(f"User positive eigendecomposition: {k_user} components")
             except Exception as e:
-                print(f"User eigendecomposition failed: {e}")
-                self.register_buffer('user_eigenvals', torch.ones(min(self.n_eigen, self.n_users)))
-                self.register_buffer('user_eigenvecs', torch.eye(self.n_users, min(self.n_eigen, self.n_users)))
-                self.user_filter = UniversalSpectralFilter(self.filter_order)
+                print(f"User positive eigendecomposition failed: {e}")
+                self.register_buffer('user_pos_eigenvals', torch.ones(k_user))
+                self.register_buffer('user_pos_eigenvecs', torch.eye(self.n_users, k_user))
+                self.user_pos_filter = UniversalSpectralFilter(self.filter_order)
+            
+            # Negative user similarities
+            user_neg_sim_np = user_neg_sim.cpu().numpy()
+            try:
+                eigenvals, eigenvecs = eigsh(sp.csr_matrix(user_neg_sim_np), k=k_user, which='LM')
+                self.register_buffer('user_neg_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
+                self.register_buffer('user_neg_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
+                self.user_neg_filter = UniversalSpectralFilter(self.filter_order)
+                print(f"User negative eigendecomposition: {k_user} components")
+            except Exception as e:
+                print(f"User negative eigendecomposition failed: {e}")
+                self.register_buffer('user_neg_eigenvals', torch.ones(k_user))
+                self.register_buffer('user_neg_eigenvecs', torch.eye(self.n_users, k_user))
+                self.user_neg_filter = UniversalSpectralFilter(self.filter_order)
         
+        # Initialize positive and negative filters for items
         if self.filter in ['i', 'ui']:
-            item_sim_np = item_sim.cpu().numpy()
+            # Positive item similarities
+            item_pos_sim_np = item_pos_sim.cpu().numpy()
             k_item = min(self.n_eigen, self.n_items - 2)
             try:
-                eigenvals, eigenvecs = eigsh(sp.csr_matrix(item_sim_np), k=k_item, which='LM')
-                self.register_buffer('item_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
-                self.register_buffer('item_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
-                self.item_filter = UniversalSpectralFilter(self.filter_order)
-                print(f"Item eigendecomposition: {k_item} components")
+                eigenvals, eigenvecs = eigsh(sp.csr_matrix(item_pos_sim_np), k=k_item, which='LM')
+                self.register_buffer('item_pos_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
+                self.register_buffer('item_pos_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
+                self.item_pos_filter = UniversalSpectralFilter(self.filter_order)
+                print(f"Item positive eigendecomposition: {k_item} components")
             except Exception as e:
-                print(f"Item eigendecomposition failed: {e}")
-                self.register_buffer('item_eigenvals', torch.ones(min(self.n_eigen, self.n_items)))
-                self.register_buffer('item_eigenvecs', torch.eye(self.n_items, min(self.n_eigen, self.n_items)))
-                self.item_filter = UniversalSpectralFilter(self.filter_order)
+                print(f"Item positive eigendecomposition failed: {e}")
+                self.register_buffer('item_pos_eigenvals', torch.ones(k_item))
+                self.register_buffer('item_pos_eigenvecs', torch.eye(self.n_items, k_item))
+                self.item_pos_filter = UniversalSpectralFilter(self.filter_order)
+            
+            # Negative item similarities
+            item_neg_sim_np = item_neg_sim.cpu().numpy()
+            try:
+                eigenvals, eigenvecs = eigsh(sp.csr_matrix(item_neg_sim_np), k=k_item, which='LM')
+                self.register_buffer('item_neg_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
+                self.register_buffer('item_neg_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
+                self.item_neg_filter = UniversalSpectralFilter(self.filter_order)
+                print(f"Item negative eigendecomposition: {k_item} components")
+            except Exception as e:
+                print(f"Item negative eigendecomposition failed: {e}")
+                self.register_buffer('item_neg_eigenvals', torch.ones(k_item))
+                self.register_buffer('item_neg_eigenvecs', torch.eye(self.n_items, k_item))
+                self.item_neg_filter = UniversalSpectralFilter(self.filter_order)
         
-        # FIXED: Set combination weights as nn.Parameter (trainable)
+        # Set combination weights as nn.Parameter (trainable)
         if self.filter == 'u':
-            self.combination_weights = nn.Parameter(torch.tensor([0.5, 0.5]))
+            # direct + user_pos + user_neg
+            self.combination_weights = nn.Parameter(torch.tensor([0.4, 0.3, 0.3]))
         elif self.filter == 'i':
-            self.combination_weights = nn.Parameter(torch.tensor([0.5, 0.5]))
+            # direct + item_pos + item_neg
+            self.combination_weights = nn.Parameter(torch.tensor([0.4, 0.3, 0.3]))
         else:  # 'ui'
-            self.combination_weights = nn.Parameter(torch.tensor([0.5, 0.3, 0.2]))
+            # direct + item_pos + item_neg + user_pos + user_neg
+            self.combination_weights = nn.Parameter(torch.tensor([0.3, 0.2, 0.2, 0.15, 0.15]))
         
         end = time.time()
-        print(f'Initialization time for Universal-SpectralCF ({self.filter}): {end-start:.2f}s')
+        print(f'Initialization time for Universal-SpectralCF with pos/neg similarities ({self.filter}): {end-start:.2f}s')
     
     def _get_filter_matrices(self):
-        """Compute filter matrices without caching for proper gradients"""
-        user_matrix = None
-        item_matrix = None
+        """Compute filter matrices for both positive and negative similarities"""
+        user_pos_matrix = None
+        user_neg_matrix = None
+        item_pos_matrix = None
+        item_neg_matrix = None
         
-        if self.filter in ['u', 'ui'] and self.user_filter is not None:
-            user_filter_response = self.user_filter(self.user_eigenvals)
-            user_matrix = self.user_eigenvecs @ torch.diag(user_filter_response) @ self.user_eigenvecs.t()
+        if self.filter in ['u', 'ui']:
+            if self.user_pos_filter is not None:
+                user_pos_filter_response = self.user_pos_filter(self.user_pos_eigenvals)
+                user_pos_matrix = self.user_pos_eigenvecs @ torch.diag(user_pos_filter_response) @ self.user_pos_eigenvecs.t()
+            
+            if self.user_neg_filter is not None:
+                user_neg_filter_response = self.user_neg_filter(self.user_neg_eigenvals)
+                user_neg_matrix = self.user_neg_eigenvecs @ torch.diag(user_neg_filter_response) @ self.user_neg_eigenvecs.t()
         
-        if self.filter in ['i', 'ui'] and self.item_filter is not None:
-            item_filter_response = self.item_filter(self.item_eigenvals)
-            item_matrix = self.item_eigenvecs @ torch.diag(item_filter_response) @ self.item_eigenvecs.t()
+        if self.filter in ['i', 'ui']:
+            if self.item_pos_filter is not None:
+                item_pos_filter_response = self.item_pos_filter(self.item_pos_eigenvals)
+                item_pos_matrix = self.item_pos_eigenvecs @ torch.diag(item_pos_filter_response) @ self.item_pos_eigenvecs.t()
+            
+            if self.item_neg_filter is not None:
+                item_neg_filter_response = self.item_neg_filter(self.item_neg_eigenvals)
+                item_neg_matrix = self.item_neg_eigenvecs @ torch.diag(item_neg_filter_response) @ self.item_neg_eigenvecs.t()
         
-        return user_matrix, item_matrix
+        return user_pos_matrix, user_neg_matrix, item_pos_matrix, item_neg_matrix
     
     def forward(self, users, target_ratings=None):
-        """Forward pass for training"""
+        """Forward pass for training with positive and negative similarities"""
         user_profiles = self.adj_tensor[users]
         direct_scores = user_profiles
         
         # Get filter matrices
-        user_filter_matrix, item_filter_matrix = self._get_filter_matrices()
+        user_pos_matrix, user_neg_matrix, item_pos_matrix, item_neg_matrix = self._get_filter_matrices()
         
         # Compute scores based on filter type
         if self.filter == 'u':
-            user_filter_rows = user_filter_matrix[users]
-            user_scores = user_filter_rows @ self.adj_tensor
+            # User-based filtering with positive and negative similarities
+            user_pos_filter_rows = user_pos_matrix[users]
+            user_pos_scores = user_pos_filter_rows @ self.adj_tensor
+            
+            user_neg_filter_rows = user_neg_matrix[users]
+            user_neg_scores = user_neg_filter_rows @ self.neg_norm_adj
+            
             weights = torch.softmax(self.combination_weights, dim=0)
-            predicted = weights[0] * direct_scores + weights[1] * user_scores
+            predicted = weights[0] * direct_scores + weights[1] * user_pos_scores + weights[2] * user_neg_scores
             
         elif self.filter == 'i':
-            item_scores = user_profiles @ item_filter_matrix
+            # Item-based filtering with positive and negative similarities
+            item_pos_scores = user_profiles @ item_pos_matrix
+            item_neg_scores = user_profiles @ item_neg_matrix
+            
             weights = torch.softmax(self.combination_weights, dim=0)
-            predicted = weights[0] * direct_scores + weights[1] * item_scores
+            predicted = weights[0] * direct_scores + weights[1] * item_pos_scores + weights[2] * item_neg_scores
             
         else:  # 'ui'
-            item_scores = user_profiles @ item_filter_matrix
-            user_filter_rows = user_filter_matrix[users]
-            user_scores = user_filter_rows @ self.adj_tensor
+            # Combined user and item filtering with positive and negative similarities
+            item_pos_scores = user_profiles @ item_pos_matrix
+            item_neg_scores = user_profiles @ item_neg_matrix
+            
+            user_pos_filter_rows = user_pos_matrix[users]
+            user_pos_scores = user_pos_filter_rows @ self.adj_tensor
+            
+            user_neg_filter_rows = user_neg_matrix[users]
+            user_neg_scores = user_neg_filter_rows @ self.neg_norm_adj
+            
             weights = torch.softmax(self.combination_weights, dim=0)
-            predicted = weights[0] * direct_scores + weights[1] * item_scores + weights[2] * user_scores
+            predicted = (weights[0] * direct_scores + 
+                        weights[1] * item_pos_scores + 
+                        weights[2] * item_neg_scores + 
+                        weights[3] * user_pos_scores + 
+                        weights[4] * user_neg_scores)
         
         if target_ratings is not None:
             # Training mode - compute loss
             loss = torch.mean((predicted - target_ratings) ** 2)
             
-            # Add regularization
+            # Add regularization for all filters
             reg = 0.0
-            if self.filter in ['u', 'ui'] and self.user_filter is not None:
-                reg += self.user_filter.coeffs.norm(2).pow(2)
-            if self.filter in ['i', 'ui'] and self.item_filter is not None:
-                reg += self.item_filter.coeffs.norm(2).pow(2)
+            if self.filter in ['u', 'ui']:
+                if self.user_pos_filter is not None:
+                    reg += self.user_pos_filter.coeffs.norm(2).pow(2)
+                if self.user_neg_filter is not None:
+                    reg += self.user_neg_filter.coeffs.norm(2).pow(2)
+            if self.filter in ['i', 'ui']:
+                if self.item_pos_filter is not None:
+                    reg += self.item_pos_filter.coeffs.norm(2).pow(2)
+                if self.item_neg_filter is not None:
+                    reg += self.item_neg_filter.coeffs.norm(2).pow(2)
             reg *= 1e-6
             
             return loss + reg
@@ -225,20 +310,36 @@ class UniversalSpectralCF(nn.Module):
 
     def debug_filter_learning(self):
         """Debug what the filters are learning"""
-        print("\n=== FILTER LEARNING DEBUG ===")
+        print("\n=== FILTER LEARNING DEBUG (POS/NEG) ===")
         with torch.no_grad():
-            if self.filter in ['u', 'ui'] and self.user_filter is not None:
-                print(f"User filter coefficients: {self.user_filter.coeffs.cpu().numpy()}")
-            if self.filter in ['i', 'ui'] and self.item_filter is not None:
-                print(f"Item filter coefficients: {self.item_filter.coeffs.cpu().numpy()}")
+            if self.filter in ['u', 'ui']:
+                if self.user_pos_filter is not None:
+                    print(f"User positive filter coefficients: {self.user_pos_filter.coeffs.cpu().numpy()}")
+                if self.user_neg_filter is not None:
+                    print(f"User negative filter coefficients: {self.user_neg_filter.coeffs.cpu().numpy()}")
+            
+            if self.filter in ['i', 'ui']:
+                if self.item_pos_filter is not None:
+                    print(f"Item positive filter coefficients: {self.item_pos_filter.coeffs.cpu().numpy()}")
+                if self.item_neg_filter is not None:
+                    print(f"Item negative filter coefficients: {self.item_neg_filter.coeffs.cpu().numpy()}")
             
             weights = torch.softmax(self.combination_weights, dim=0)
             print(f"Combination weights: {weights.cpu().numpy()}")
             
-            if self.filter in ['u', 'ui'] and self.user_filter is not None:
-                user_response = self.user_filter(self.user_eigenvals)
-                print(f"User filter response range: [{user_response.min():.4f}, {user_response.max():.4f}]")
-            if self.filter in ['i', 'ui'] and self.item_filter is not None:
-                item_response = self.item_filter(self.item_eigenvals)
-                print(f"Item filter response range: [{item_response.min():.4f}, {item_response.max():.4f}]")
+            if self.filter in ['u', 'ui']:
+                if self.user_pos_filter is not None:
+                    user_pos_response = self.user_pos_filter(self.user_pos_eigenvals)
+                    print(f"User positive filter response range: [{user_pos_response.min():.4f}, {user_pos_response.max():.4f}]")
+                if self.user_neg_filter is not None:
+                    user_neg_response = self.user_neg_filter(self.user_neg_eigenvals)
+                    print(f"User negative filter response range: [{user_neg_response.min():.4f}, {user_neg_response.max():.4f}]")
+            
+            if self.filter in ['i', 'ui']:
+                if self.item_pos_filter is not None:
+                    item_pos_response = self.item_pos_filter(self.item_pos_eigenvals)
+                    print(f"Item positive filter response range: [{item_pos_response.min():.4f}, {item_pos_response.max():.4f}]")
+                if self.item_neg_filter is not None:
+                    item_neg_response = self.item_neg_filter(self.item_neg_eigenvals)
+                    print(f"Item negative filter response range: [{item_neg_response.min():.4f}, {item_neg_response.max():.4f}]")
         print("=== END DEBUG ===\n")

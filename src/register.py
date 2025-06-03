@@ -8,7 +8,7 @@ Batsuuri. Tse et al. uSpec: Universal Spectral Collaborative Filtering
 
 import world
 import dataloader
-import model
+import model_single
 import utils
 from pprint import pprint
 
@@ -25,5 +25,5 @@ print('===========end===================')
 MODELS = {
     # 'mf': model.PureMF,
     # 'lgn': model.LightGCN,
-    'uspec': model.UniversalSpectralCF  # Add this line
+    'uspec': model_single.UniversalSpectralCF  # Add this line
 }

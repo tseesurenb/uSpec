@@ -15,7 +15,7 @@ from tqdm import tqdm
 import time
 import register
 from register import dataset
-from model import UniversalSpectralCF
+from model_single import UniversalSpectralCF
 
 import warnings
 warnings.filterwarnings("ignore", message="Can't initialize NVML")
