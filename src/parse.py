@@ -1,49 +1,25 @@
 '''
-Created on Mar 1, 2020
-Pytorch Implementation of LightGCN in
-Xiangnan He et al. LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation
+Created on June 3, 2025
+Pytorch Implementation of uSpec in
+Batsuuri. Tse et al. uSpec: Universal Spectral Collaborative Filtering
 
-@author: Jianbai Ye (gusye@mail.ustc.edu.cn)
+@author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
 import argparse
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Go lightGCN")
-    parser.add_argument('--bpr_batch', type=int,default=2048,
-                        help="the batch size for bpr loss training procedure")
-    parser.add_argument('--recdim', type=int,default=64,
-                        help="the embedding size of lightGCN")
-    parser.add_argument('--layer', type=int,default=3,
-                        help="the layer num of lightGCN")
-    parser.add_argument('--lr', type=float,default=0.001,
-                        help="the learning rate")
-    parser.add_argument('--decay', type=float,default=1e-4,
-                        help="the weight decay for l2 normalizaton")
-    parser.add_argument('--dropout', type=int,default=0,
-                        help="using the dropout or not")
-    parser.add_argument('--keepprob', type=float,default=0.6,
-                        help="the batch size for bpr loss training procedure")
-    parser.add_argument('--a_fold', type=int,default=100,
-                        help="the fold num used to split large adj matrix, like gowalla")
-    parser.add_argument('--testbatch', type=int,default=100,
-                        help="the batch size of users for testing")
-    parser.add_argument('--dataset', type=str,default='gowalla',
-                        help="available datasets: [lastfm, gowalla, yelp2018, amazon-book]")
-    parser.add_argument('--path', type=str,default="./checkpoints",
-                        help="path to save weights")
-    parser.add_argument('--topks', nargs='?',default="[20]",
-                        help="@k test list")
-    parser.add_argument('--tensorboard', type=int,default=1,
-                        help="enable tensorboard")
-    parser.add_argument('--comment', type=str,default="lgn")
-    parser.add_argument('--load', type=int,default=0)
+    parser = argparse.ArgumentParser(description="Go uinversal Spectral model for CF")
+
+    parser.add_argument('--lr', type=float,default=0.001, help="the learning rate")
+    parser.add_argument('--decay', type=float,default=1e-4, help="the weight decay for l2 normalizaton")
+    parser.add_argument('--testbatch', type=int,default=100, help="the batch size of users for testing")
+    parser.add_argument('--dataset', type=str,default='gowalla', help="available datasets: [lastfm, gowalla, yelp2018, amazon-book]")
+    parser.add_argument('--topks', nargs='?',default="[20]", help="@k test list")
     parser.add_argument('--i_K', type=int,default=400)
     parser.add_argument('--u_K', type=int,default=400)
     parser.add_argument('--sim_K', type=int,default=40)
     parser.add_argument('--s_temp', type=float,default=1.0)
-    parser.add_argument('--mode', type=str,default='012345')
-    parser.add_argument('--abl_study', type=int,default=0)
     parser.add_argument('--epochs', type=int,default=100)
     parser.add_argument('--n_eigen', type=int,default=100)
     parser.add_argument('--multicore', type=int, default=0, help='whether we use multiprocessing or not in test')
@@ -51,5 +27,6 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=2020, help='random seed')
     parser.add_argument('--model', type=str, default='uspec', help='rec-model, support [cf, uspec]')
     parser.add_argument('--filter', type=str, default='u', help='u, i, and ui')
-    parser.add_argument('--simple_model', type=str, default='none', help='simple-rec-model, support [none, lgn-ide, gf-cf]')
+    parser.add_argument('--verbose', type=int, default=0, help='0 for silent, 1 for verbose')
+    
     return parser.parse_args()

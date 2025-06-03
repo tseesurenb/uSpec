@@ -1,3 +1,11 @@
+'''
+Created on June 3, 2025
+Pytorch Implementation of uSpec in
+Batsuuri. Tse et al. uSpec: Universal Spectral Collaborative Filtering
+
+@author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
+'''
+
 import world
 import dataloader
 import model
@@ -11,27 +19,11 @@ elif world.dataset == 'lastfm':
 
 print('===========config================')
 pprint(world.config)
-print("cores for test:", world.CORES)
-print("comment:", world.comment)
-print("tensorboard:", world.tensorboard)
-print("LOAD:", world.LOAD)
-print("Weight path:", world.PATH)
 print("Test Topks:", world.topks)
-print("using bpr loss")
 print('===========end===================')
 
-# MODELS = {
-#     'mf': model.PureMF,
-#     'lgn': model.LightGCN
-# }
-
-# MODELS = {
-#     'mf': model.PureMF,
-#     'lgn': model.LightGCN,
-#     'universal-spectral': model.UniversalSpectralCF  # Add this line
-# }
-
 MODELS = {
-    'cf': model.ClosedFormSpectralCF,
+    # 'mf': model.PureMF,
+    # 'lgn': model.LightGCN,
     'uspec': model.UniversalSpectralCF  # Add this line
 }

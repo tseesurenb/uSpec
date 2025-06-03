@@ -1,3 +1,11 @@
+'''
+Created on June 3, 2025
+Pytorch Implementation of uSpec in
+Batsuuri. Tse et al. uSpec: Universal Spectral Collaborative Filtering
+
+@author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
+'''
+
 import world
 import utils
 from world import cprint

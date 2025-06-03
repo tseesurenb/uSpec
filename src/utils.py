@@ -1,10 +1,11 @@
 '''
-Created on Mar 1, 2020
-Pytorch Implementation of LightGCN in
-Xiangnan He et al. LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation
+Created on June 3, 2025
+Pytorch Implementation of uSpec in
+Batsuuri. Tse et al. uSpec: Universal Spectral Collaborative Filtering
 
-@author: Jianbai Ye (gusye@mail.ustc.edu.cn)
+@author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
+
 import world
 import torch
 from torch import nn, optim
@@ -12,93 +13,12 @@ import numpy as np
 from torch import log
 from dataloader import BasicDataset
 from time import time
-from model import PairWiseModel
 from sklearn.metrics import roc_auc_score
 import os
 
 import scipy.sparse as sp
 import pickle
-# Remove this line: import time  # This was causing the conflict
 
-try:
-    from cppimport import imp_from_filepath
-    from os.path import join, dirname
-    path = join(dirname(__file__), "sources/sampling.cpp")
-    sampling = imp_from_filepath(path)
-    sampling.seed(world.seed)
-    sample_ext = True
-except:
-    world.cprint("Cpp extension not loaded")
-    sample_ext = False
-
-
-class BPRLoss:
-    def __init__(self,
-                 recmodel : PairWiseModel,
-                 config : dict):
-        self.model = recmodel
-        self.weight_decay = config['decay']
-        self.lr = config['lr']
-        self.opt = optim.Adam(recmodel.parameters(), lr=self.lr)
-
-    def stageOne(self, users, pos, neg):
-        loss, reg_loss = self.model.bpr_loss(users, pos, neg)
-        reg_loss = reg_loss*self.weight_decay
-        loss = loss + reg_loss
-
-        self.opt.zero_grad()
-        loss.backward()
-        self.opt.step()
-
-        return loss.cpu().item()
-
-
-def UniformSample_original(dataset, neg_ratio = 1):
-    dataset : BasicDataset
-    allPos = dataset.allPos
-    start = time()
-    if sample_ext:
-        S = sampling.sample_negative(dataset.n_users, dataset.m_items,
-                                     dataset.trainDataSize, allPos, neg_ratio)
-    else:
-        S = UniformSample_original_python(dataset)
-    return S
-
-def UniformSample_original_python(dataset):
-    """
-    the original impliment of BPR Sampling in LightGCN
-    :return:
-        np.array
-    """
-    total_start = time()
-    dataset : BasicDataset
-    user_num = dataset.trainDataSize
-    users = np.random.randint(0, dataset.n_users, user_num)
-    allPos = dataset.allPos
-    S = []
-    sample_time1 = 0.
-    sample_time2 = 0.
-    for i, user in enumerate(users):
-        start = time()
-        posForUser = allPos[user]
-        if len(posForUser) == 0:
-            continue
-        sample_time2 += time() - start
-        posindex = np.random.randint(0, len(posForUser))
-        positem = posForUser[posindex]
-        while True:
-            negitem = np.random.randint(0, dataset.m_items)
-            if negitem in posForUser:
-                continue
-            else:
-                break
-        S.append([user, positem, negitem])
-        end = time()
-        sample_time1 += end - start
-    total = time() - total_start
-    return np.array(S)
-
-# ===================end samplers==========================
 # =====================utils====================================
 
 def set_seed(seed):
@@ -108,16 +28,16 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
     torch.manual_seed(seed)
 
-def getFileName():
-    if world.model_name == 'mf':
-        file = f"mf-{world.dataset}-{world.config['latent_dim_rec']}.pth.tar"
-    elif world.model_name == 'lgn':
-        file = f"lgn-{world.dataset}-{world.config['lightGCN_n_layers']}-{world.config['latent_dim_rec']}.pth.tar"
-    return os.path.join(world.FILE_PATH,file)
+# def getFileName():
+#     if world.model_name == 'mf':
+#         file = f"mf-{world.dataset}-{world.config['latent_dim_rec']}.pth.tar"
+#     elif world.model_name == 'lgn':
+#         file = f"lgn-{world.dataset}-{world.config['lightGCN_n_layers']}-{world.config['latent_dim_rec']}.pth.tar"
+#     return os.path.join(world.FILE_PATH,file)
 
 def minibatch(*tensors, **kwargs):
 
-    batch_size = kwargs.get('batch_size', world.config['bpr_batch_size'])
+    batch_size = kwargs.get('batch_size', world.config['test_u_batch_size'])
 
     if len(tensors) == 1:
         tensor = tensors[0]
@@ -148,7 +68,6 @@ def shuffle(*arrays, **kwargs):
         return result, shuffle_indices
     else:
         return result
-
 
 class timer:
     """

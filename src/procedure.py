@@ -1,7 +1,11 @@
 '''
-Simplified Procedure for Universal Spectral CF
-Uses MSE loss instead of BPR for faster, simpler training
+Created on June 3, 2025
+Pytorch Implementation of uSpec in
+Batsuuri. Tse et al. uSpec: Universal Spectral Collaborative Filtering
+
+@author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
+
 import world
 import numpy as np
 import torch
@@ -18,36 +22,21 @@ import os
 CORES = multiprocessing.cpu_count() // 2
 
 class MSELoss:
-    """MSE loss for collaborative filtering - Direct rating prediction"""
     def __init__(self, model, config):
         self.model = model
         self.lr = config['lr']
         self.weight_decay = config.get('decay', 1e-4)
         
-        # Handle different model types
-        if hasattr(model, 'parameters'):
-            # PyTorch nn.Module model
-            self.opt = torch.optim.Adam(model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        else:
-            # Custom model with built-in optimizer
-            self.opt = None  # Model handles its own optimization
+        self.opt = torch.optim.Adam(model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         
     def compute_loss(self, users, target_ratings):
-        """
-        Compute MSE loss directly against observed ratings
-        Much simpler - no negative sampling needed!
-        """
-        # Get all predicted ratings for the batch of users using forward pass
-        predicted_ratings = self.model(users, target_ratings=None)  # None means prediction mode
         
-        # Ensure it's on the right device
+        predicted_ratings = self.model(users, target_ratings=None)
+        
         if isinstance(predicted_ratings, np.ndarray):
             predicted_ratings = torch.from_numpy(predicted_ratings).to(world.device)
         
-        # Compute MSE loss only on observed interactions
         mse_loss = torch.mean((predicted_ratings - target_ratings) ** 2)
-        
-        # Add small regularization on filter coefficients if available
         reg_loss = 0.0
         if hasattr(self.model, 'user_filter') and hasattr(self.model.user_filter, 'coeffs'):
             reg_loss += self.model.user_filter.coeffs.norm(2).pow(2) * 1e-6
@@ -58,35 +47,24 @@ class MSELoss:
     
     def train_step(self, users, target_ratings):
         """Single training step - much simpler!"""
-        if self.opt is not None:
-            # PyTorch model
-            self.opt.zero_grad()
-            loss = self.compute_loss(users, target_ratings)
-            loss.backward()
-            self.opt.step()
-            
-            # Invalidate the model's cache since parameters changed
-            if hasattr(self.model, '_invalidate_cache'):
-                self.model._invalidate_cache()
-            
-            return loss.cpu().item()
-        else:
-            # Custom model with built-in training
-            return self.model.train_step(users.cpu().numpy(), target_ratings.cpu().numpy())
+        self.opt.zero_grad()
+        loss = self.compute_loss(users, target_ratings)
+        loss.backward()
+        self.opt.step()
+        
+        # Invalidate the model's cache since parameters changed
+        if hasattr(self.model, '_invalidate_cache'):
+            self.model._invalidate_cache()
+        
+        return loss.cpu().item()
+    
 
 def create_target_ratings(dataset, users):
-    """
-    Create target rating matrix for a batch of users
-    1.0 for positive interactions, 0.0 for non-interactions
-    OPTIMIZED: Only create ratings for observed interactions + some random negatives
-    """
     batch_size = len(users)
     n_items = dataset.m_items
     
-    # Instead of full matrix, use sparse representation for efficiency
     target_ratings = torch.zeros(batch_size, n_items)
     
-    # Set positive interactions to 1.0
     for i, user in enumerate(users):
         pos_items = dataset.allPos[user]
         if len(pos_items) > 0:
@@ -95,15 +73,10 @@ def create_target_ratings(dataset, users):
     return target_ratings
 
 def train(dataset, model, loss_class, epoch):
-    """
-    FIXED: Better user sampling strategy for training
-    """
-    # Set model to training mode (important for nested PyTorch modules)
-    if hasattr(model, 'train'):
-        model.train()
-    
+    model.train()
+
     mse_loss = loss_class
-    
+
     n_users = dataset.n_users
     batch_size = 512  # Increased batch size for better coverage
     
@@ -369,7 +342,7 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
     
     plt.close('all')  # Close all figures to free memory
 
-def train_universal_spectral(dataset, model, config, total_epochs=15, verbose=False):
+def train_universal_spectral(dataset, model, config, total_epochs=15, verbose=1):
     """
     FIXED: Better evaluation schedule and monitoring
     """
@@ -399,7 +372,7 @@ def train_universal_spectral(dataset, model, config, total_epochs=15, verbose=Fa
         epoch_time = time() - epoch_start
         
         # Print progress every 5 epochs only
-        if verbose:
+        if verbose == 1:
             if epoch % 5 == 0 or epoch == total_epochs - 1:
                 print(f"\nEpoch {epoch+1}/{total_epochs}: {train_info}")
                 model.debug_filter_learning()
@@ -444,7 +417,8 @@ def train_and_evaluate(dataset, model, config):
     # Training with the epochs from config
     trained_model = train_universal_spectral(
         dataset, model, config, 
-        total_epochs=config.get('epochs', 15)  # Use config epochs
+        total_epochs=config.get('epochs', 15),  # Use config epochs
+        verbose=config.get('verbose', 1)  # Use config verbosity
     )
     
     # Final comprehensive evaluation
