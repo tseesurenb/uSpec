@@ -32,7 +32,7 @@ model_start = time.time()
 adj_mat = dataset.UserItemNet.tolil()
 
 # Create the model with proper config
-Recmodel = UniversalSpectralCF(adj_mat, config)
+Recmodel = UniversalSpectralCF(adj_mat, world.config)
 
 # Initialize the model (precompute eigendecompositions)
 Recmodel.train()
