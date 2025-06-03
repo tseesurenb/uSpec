@@ -41,6 +41,8 @@ config['filter']= args.filter
 config['filter_order'] = 4  # Polynomial order for spectral filters
 config['spectral_reg'] = 1e-5  # Regularization for filter coefficients
 config['verbose']= args.verbose
+config['A_split'] = False
+config['A_n_fold'] = args.a_fold
 
 GPU = torch.cuda.is_available()
 device = torch.device('cuda' if GPU else "cpu")

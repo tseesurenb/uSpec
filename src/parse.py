@@ -28,5 +28,6 @@ def parse_args():
     parser.add_argument('--model', type=str, default='uspec', help='rec-model, support [cf, uspec]')
     parser.add_argument('--filter', type=str, default='u', help='u, i, and ui')
     parser.add_argument('--verbose', type=int, default=0, help='0 for silent, 1 for verbose')
+    parser.add_argument('--a_fold', type=int,default=100, help="the fold num used to split large adj matrix, like gowalla")
     
     return parser.parse_args()
