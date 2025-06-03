@@ -20,7 +20,8 @@ args = parse_args()
 #ROOT_PATH = "/home/madmin/LightGCN-PyTorch"
 
 #ROOT_PATH = "./"
-ROOT_PATH = "/Users/tseesuren/Desktop/ActiveResearch/sota_models/LightGCN-Pytorch"
+ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # This will be /home/madmin/uSpec
+#ROOT_PATH = "/Users/tseesuren/Desktop/ActiveResearch/sota_models/LightGCN-Pytorch"
 
 CODE_PATH = join(ROOT_PATH, 'code')
 DATA_PATH = join(ROOT_PATH, 'data')
