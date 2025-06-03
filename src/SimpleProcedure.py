@@ -102,7 +102,10 @@ def MSE_train_simple(dataset, model, loss_class, epoch):
     """
     Comprehensive MSE training with proper user coverage
     """
-    model.train()
+    # Set model to training mode (important for nested PyTorch modules)
+    if hasattr(model, 'train'):
+        model.train()
+    
     mse_loss = loss_class
     
     n_users = dataset.n_users
@@ -183,7 +186,7 @@ def Test_Simple(dataset, model, epoch, multicore=0):
     u_batch_size = world.config['test_u_batch_size']
     testDict = dataset.testDict
     
-    #model.eval()
+    model.eval()
     max_K = max(world.topks)
     
     results = {'precision': np.zeros(len(world.topks)),

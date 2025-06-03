@@ -153,6 +153,22 @@ class UniversalSpectralCF(object):
         self.filter_order = self.config.get('filter_order', 2)
         self.lr = self.config.get('lr', 0.01)
         self.filter = self.config.get('filter', 'ui')  # 'u', 'i', or 'ui'
+    
+    def train(self, mode=True):
+        """Set training mode for nested PyTorch modules"""
+        if hasattr(self, 'user_filter'):
+            self.user_filter.train(mode)
+        if hasattr(self, 'item_filter'):
+            self.item_filter.train(mode)
+        return self
+    
+    def eval(self):
+        """Set evaluation mode for nested PyTorch modules"""
+        if hasattr(self, 'user_filter'):
+            self.user_filter.eval()
+        if hasattr(self, 'item_filter'):
+            self.item_filter.eval()
+        return self
         
     def train(self):
         start = time.time()
