@@ -100,7 +100,7 @@ def create_target_ratings(dataset, users):
 
 def MSE_train_simple(dataset, model, loss_class, epoch):
     """
-    Comprehensive MSE training with proper user coverage
+    FIXED: Better user sampling strategy for training
     """
     # Set model to training mode (important for nested PyTorch modules)
     if hasattr(model, 'train'):
@@ -109,36 +109,26 @@ def MSE_train_simple(dataset, model, loss_class, epoch):
     mse_loss = loss_class
     
     n_users = dataset.n_users
-    batch_size = 256  # Reasonable batch size
+    batch_size = 512  # Increased batch size for better coverage
     
-    # Strategy: Cycle through ALL users over multiple epochs
-    # This ensures every user is seen during training
-    users_per_epoch = min(n_users, max(1000, n_users // 5))  # At least 1000 users per epoch
+    # FIXED: Better sampling strategy - ensure all users are seen over time
+    users_per_epoch = min(n_users, max(2000, n_users // 3))  # Increased coverage
     n_batch = users_per_epoch // batch_size
     
     total_loss = 0.0
     start_time = time()
     
-    # Create a more systematic sampling approach
-    # Option A: Sequential sampling with random shuffle
-    epoch_offset = (epoch * users_per_epoch) % n_users
+    # FIXED: Use random sampling with better coverage
+    # Sample different users each epoch to ensure full dataset coverage
+    np.random.seed(epoch * 42)  # Different seed each epoch for variety
+    sampled_users = np.random.choice(n_users, users_per_epoch, replace=False)
     
     for batch_idx in range(n_batch):
-        # Sequential sampling with wraparound
-        start_idx = (epoch_offset + batch_idx * batch_size) % n_users
-        end_idx = start_idx + batch_size
+        # Get batch of users
+        start_idx = batch_idx * batch_size
+        end_idx = min(start_idx + batch_size, users_per_epoch)
         
-        if end_idx <= n_users:
-            user_indices = np.arange(start_idx, end_idx)
-        else:
-            # Wraparound case
-            user_indices = np.concatenate([
-                np.arange(start_idx, n_users),
-                np.arange(0, end_idx - n_users)
-            ])
-        
-        # Add some randomization to avoid order effects
-        np.random.shuffle(user_indices)
+        user_indices = sampled_users[start_idx:end_idx]
         
         users = torch.LongTensor(user_indices).to(world.device)
         
@@ -198,11 +188,44 @@ def Test_Simple(dataset, model, epoch, multicore=0):
     with torch.no_grad():
         users = list(testDict.keys())
         
-        # COMPREHENSIVE evaluation for final test, fast for training
-        if epoch >= 0:  # During training - FAST
-            test_users = users[:min(len(users), 200)]  # Only 200 users!
-            batch_size = min(u_batch_size * 2, 200)  # Larger batches
-            print(f"Quick eval on {len(test_users)} users...")
+        # FIXED: Better sampling strategy for quick evaluation
+        if epoch >= 0:  # During training - FAST but REPRESENTATIVE
+            # Use stratified sampling instead of just first 200 users
+            num_quick_users = min(len(users), 500)  # Increased from 200 to 500
+            
+            # Group users by activity level for stratified sampling
+            user_activity = [(u, len(dataset.allPos[u])) for u in users]
+            user_activity.sort(key=lambda x: x[1])  # Sort by activity
+            
+            # Sample from different activity levels
+            n_strata = 5
+            strata_size = len(user_activity) // n_strata
+            test_users = []
+            
+            users_per_stratum = num_quick_users // n_strata
+            for i in range(n_strata):
+                start_idx = i * strata_size
+                end_idx = (i + 1) * strata_size if i < n_strata - 1 else len(user_activity)
+                stratum_users = [u for u, _ in user_activity[start_idx:end_idx]]
+                
+                # Randomly sample from this stratum
+                if len(stratum_users) > users_per_stratum:
+                    sampled = np.random.choice(stratum_users, users_per_stratum, replace=False)
+                else:
+                    sampled = stratum_users
+                test_users.extend(sampled)
+            
+            # Fill remaining slots with random users if needed
+            while len(test_users) < num_quick_users and len(test_users) < len(users):
+                remaining_users = [u for u in users if u not in test_users]
+                if remaining_users:
+                    test_users.append(np.random.choice(remaining_users))
+                else:
+                    break
+                    
+            batch_size = min(u_batch_size * 2, 200)  # Larger batches for speed
+            print(f"Quick eval on {len(test_users)} users (stratified sample)...")
+            
         else:  # Final evaluation - COMPREHENSIVE
             test_users = users  # ALL USERS!
             batch_size = u_batch_size  # Normal batch size
@@ -352,8 +375,7 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
 
 def train_universal_spectral_simple(dataset, model, config, total_epochs=15, verbose=False):
     """
-    ULTRA-FAST training procedure for Universal Spectral CF
-    Direct MSE on rating matrix - optimized for speed!
+    FIXED: Better evaluation schedule and monitoring
     """
     print("="*70)
     print("STARTING ULTRA-FAST DIRECT MSE TRAINING")
@@ -386,8 +408,8 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
                 print(f"\nEpoch {epoch+1}/{total_epochs}: {train_info}")
                 model.debug_filter_learning()
         
-        # Quick evaluation only at the end and middle
-        if epoch == total_epochs // 2 or epoch == total_epochs - 1:
+        # FIXED: More frequent evaluation to track training progress
+        if epoch == total_epochs // 3 or epoch == 2 * total_epochs // 3 or epoch == total_epochs - 1:
             print(f"\n[QUICK EVAL - Epoch {epoch+1}]")
             results = Test_Simple(dataset, model, epoch, world.config['multicore'])
             
@@ -401,6 +423,10 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
             if current_recall > best_recall:
                 best_recall = current_recall
                 print(f"✅ New best recall: {best_recall:.6f}")
+            
+            # Early stopping if performance degrades significantly
+            if len(recall_history) > 1 and current_recall < 0.7 * max(recall_history):
+                print(f"⚠️  Performance dropped significantly, consider stopping early")
     
     total_time = time() - training_start
     print(f"\n" + "="*70)
