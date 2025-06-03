@@ -47,14 +47,14 @@ training_start = time.time()
 
 # Use the simplified training procedure
 trained_model, final_results = SimpleProcedure.simple_train_and_evaluate(
-    dataset, Recmodel, config
+    dataset, Recmodel, world.config
 )
 
 total_time = time.time() - training_start
 
 # Display final results
 print("\n" + "="*70)
-print(f"              FINAL RESULTS (SIMPLIFIED MSE TRAINING) - {config['dataset']}, filter - {config['filter']}")
+print(f"              FINAL RESULTS (SIMPLIFIED MSE TRAINING) - {world.config['dataset']}, filter - {world.config['filter']}")
 print("="*70)
 print(f"\033[91mFinal Results: Recall@20={final_results['recall'][0]:.6f}, NDCG@20={final_results['ndcg'][0]:.6f}, Precision@20={final_results['precision'][0]:.6f}\033[0m")
 print(f"Total experiment time: {total_time:.2f}s")
