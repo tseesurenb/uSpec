@@ -17,6 +17,10 @@ import register
 from register import dataset
 from model import UniversalSpectralCF
 
+import warnings
+warnings.filterwarnings("ignore", message="Can't initialize NVML")
+
+
 # ==============================
 utils.set_seed(world.seed)
 print(">>SEED:", world.seed)
