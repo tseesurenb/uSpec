@@ -12,6 +12,8 @@ from time import time
 from tqdm import tqdm
 import multiprocessing
 from sklearn.metrics import roc_auc_score
+import matplotlib.pyplot as plt
+import os
 
 CORES = multiprocessing.cpu_count() // 2
 
@@ -103,7 +105,7 @@ def MSE_train_simple(dataset, model, loss_class, epoch):
     avg_loss = total_loss / n_batch
     training_time = time() - start_time
     
-    return f"MSE_loss: {avg_loss:.4f} | Time: {training_time:.2f}s"
+    return avg_loss, f"MSE_loss: {avg_loss:.4f} | Time: {training_time:.2f}s"
 
 def test_one_batch_simple(X):
     """Same as original but simplified"""
@@ -122,16 +124,13 @@ def test_one_batch_simple(X):
 
 def Test_Simple(dataset, model, epoch, multicore=0):
     """
-    Simplified test procedure - faster evaluation
+    ULTRA-FAST test procedure for training, COMPREHENSIVE for final eval
     """
     u_batch_size = world.config['test_u_batch_size']
     testDict = dataset.testDict
     
     model.eval()
     max_K = max(world.topks)
-    
-    if multicore == 1:
-        pool = multiprocessing.Pool(CORES)
     
     results = {'precision': np.zeros(len(world.topks)),
                'recall': np.zeros(len(world.topks)),
@@ -142,18 +141,22 @@ def Test_Simple(dataset, model, epoch, multicore=0):
     with torch.no_grad():
         users = list(testDict.keys())
         
-        # Limit test users for speed during training (remove this for final eval)
-        if epoch >= 0:  # During training, test on subset
-            test_users = users[:min(len(users), 1000)]  # Test on first 1000 users only
-        else:  # Final evaluation, test on all users
-            test_users = users
+        # COMPREHENSIVE evaluation for final test, fast for training
+        if epoch >= 0:  # During training - FAST
+            test_users = users[:min(len(users), 200)]  # Only 200 users!
+            batch_size = min(u_batch_size * 2, 200)  # Larger batches
+            print(f"Quick eval on {len(test_users)} users...")
+        else:  # Final evaluation - COMPREHENSIVE
+            test_users = users  # ALL USERS!
+            batch_size = u_batch_size  # Normal batch size
+            print(f"Comprehensive evaluation on ALL {len(test_users)} users...")
         
         users_list = []
         rating_list = []
         groundTrue_list = []
         
         # Process in batches
-        for batch_users in utils.minibatch(test_users, batch_size=u_batch_size):
+        for batch_users in utils.minibatch(test_users, batch_size=batch_size):
             allPos = dataset.getUserPosItems(batch_users)
             groundTrue = [testDict[u] for u in batch_users]
             
@@ -174,7 +177,7 @@ def Test_Simple(dataset, model, epoch, multicore=0):
                 exclude_items.extend(items)
             rating[exclude_index, exclude_items] = -(1<<10)
             
-            # Get top-K items
+            # Get top-K items for ALL ITEMS
             _, rating_K = torch.topk(rating, k=max_K)
             
             users_list.append(batch_users)
@@ -183,12 +186,9 @@ def Test_Simple(dataset, model, epoch, multicore=0):
         
         # Compute metrics
         X = zip(rating_list, groundTrue_list)
-        if multicore == 1:
-            pre_results = pool.map(test_one_batch_simple, X)
-        else:
-            pre_results = []
-            for x in X:
-                pre_results.append(test_one_batch_simple(x))
+        pre_results = []
+        for x in X:
+            pre_results.append(test_one_batch_simple(x))
         
         # Aggregate results
         for result in pre_results:
@@ -199,18 +199,101 @@ def Test_Simple(dataset, model, epoch, multicore=0):
         results['recall'] /= float(len(test_users))
         results['precision'] /= float(len(test_users))
         results['ndcg'] /= float(len(test_users))
-        
-        if multicore == 1:
-            pool.close()
     
     eval_time = time() - start_time
-    print(f"Evaluation completed in {eval_time:.2f}s")
-    #print(f"Recall@20: {results['recall'][0]:.6f}, NDCG@20: {results['ndcg'][0]:.6f}, Precision@20: {results['precision'][0]:.6f}")
+    if epoch >= 0:
+        print(f"Quick evaluation completed in {eval_time:.2f}s")
+    else:
+        print(f"COMPREHENSIVE evaluation completed in {eval_time:.2f}s")
     print(f"\033[91mRecall@20: {results['recall'][0]:.6f}, NDCG@20: {results['ndcg'][0]:.6f}, Precision@20: {results['precision'][0]:.6f}\033[0m")
     
     return results
 
-def train_universal_spectral_simple(dataset, model, config, total_epochs=15, verbose = False):
+def save_training_plots(loss_history, recall_history, precision_history, ndcg_history, save_dir="./plots"):
+    """
+    Save training plots: loss, recall vs precision, and NDCG
+    """
+    # Create plots directory if it doesn't exist
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # Set up the plotting style
+    plt.style.use('default')
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    
+    # Plot 1: Loss function over epochs
+    axes[0, 0].plot(range(1, len(loss_history) + 1), loss_history, 'b-', linewidth=2, marker='o')
+    axes[0, 0].set_title('Training Loss Over Epochs', fontsize=14, fontweight='bold')
+    axes[0, 0].set_xlabel('Epoch')
+    axes[0, 0].set_ylabel('MSE Loss')
+    axes[0, 0].grid(True, alpha=0.3)
+    axes[0, 0].set_yscale('log')  # Log scale for better visualization
+    
+    # Plot 2: Recall vs Precision
+    if len(recall_history) > 0 and len(precision_history) > 0:
+        axes[0, 1].plot(precision_history, recall_history, 'g-', linewidth=2, marker='s')
+        axes[0, 1].set_title('Recall vs Precision', fontsize=14, fontweight='bold')
+        axes[0, 1].set_xlabel('Precision@20')
+        axes[0, 1].set_ylabel('Recall@20')
+        axes[0, 1].grid(True, alpha=0.3)
+        # Add points for each evaluation
+        for i, (p, r) in enumerate(zip(precision_history, recall_history)):
+            axes[0, 1].annotate(f'E{i+1}', (p, r), xytext=(5, 5), textcoords='offset points', fontsize=8)
+    
+    # Plot 3: NDCG over evaluations
+    if len(ndcg_history) > 0:
+        eval_points = range(1, len(ndcg_history) + 1)
+        axes[1, 0].plot(eval_points, ndcg_history, 'r-', linewidth=2, marker='^')
+        axes[1, 0].set_title('NDCG@20 Over Evaluations', fontsize=14, fontweight='bold')
+        axes[1, 0].set_xlabel('Evaluation Point')
+        axes[1, 0].set_ylabel('NDCG@20')
+        axes[1, 0].grid(True, alpha=0.3)
+    
+    # Plot 4: All metrics together
+    if len(recall_history) > 0:
+        eval_points = range(1, len(recall_history) + 1)
+        axes[1, 1].plot(eval_points, recall_history, 'b-', linewidth=2, marker='o', label='Recall@20')
+        axes[1, 1].plot(eval_points, precision_history, 'g-', linewidth=2, marker='s', label='Precision@20')
+        axes[1, 1].plot(eval_points, ndcg_history, 'r-', linewidth=2, marker='^', label='NDCG@20')
+        axes[1, 1].set_title('All Metrics Over Training', fontsize=14, fontweight='bold')
+        axes[1, 1].set_xlabel('Evaluation Point')
+        axes[1, 1].set_ylabel('Metric Value')
+        axes[1, 1].legend()
+        axes[1, 1].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    
+    # Save the plot
+    plot_path = os.path.join(save_dir, f"training_plots_{int(time())}.png")
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+    print(f"\n📊 Training plots saved to: {plot_path}")
+    
+    # Also save individual plots
+    individual_plots = {
+        'loss': (loss_history, 'Training Loss', 'Epoch', 'MSE Loss', 'b-'),
+        'recall': (recall_history, 'Recall@20 Over Training', 'Evaluation', 'Recall@20', 'r-'),
+        'precision': (precision_history, 'Precision@20 Over Training', 'Evaluation', 'Precision@20', 'g-'),
+        'ndcg': (ndcg_history, 'NDCG@20 Over Training', 'Evaluation', 'NDCG@20', 'm-')
+    }
+    
+    for name, (data, title, xlabel, ylabel, style) in individual_plots.items():
+        if len(data) > 0:
+            plt.figure(figsize=(8, 6))
+            x_data = range(1, len(data) + 1)
+            plt.plot(x_data, data, style, linewidth=2, marker='o')
+            plt.title(title, fontsize=14, fontweight='bold')
+            plt.xlabel(xlabel)
+            plt.ylabel(ylabel)
+            plt.grid(True, alpha=0.3)
+            if name == 'loss':
+                plt.yscale('log')
+            
+            individual_path = os.path.join(save_dir, f"{name}_plot_{int(time())}.png")
+            plt.savefig(individual_path, dpi=300, bbox_inches='tight')
+            plt.close()
+    
+    plt.close('all')  # Close all figures to free memory
+
+def train_universal_spectral_simple(dataset, model, config, total_epochs=15, verbose=False):
     """
     ULTRA-FAST training procedure for Universal Spectral CF
     Direct MSE on rating matrix - optimized for speed!
@@ -222,6 +305,12 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
     # Initialize MSE loss
     mse_loss = SimpleMSELoss(model, config)
     
+    # Training history for plotting
+    loss_history = []
+    recall_history = []
+    precision_history = []
+    ndcg_history = []
+    
     # Training loop with progress tracking
     best_recall = 0.0
     training_start = time()
@@ -230,7 +319,8 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
         epoch_start = time()
         
         # Training step
-        train_info = MSE_train_simple(dataset, model, mse_loss, epoch)
+        avg_loss, train_info = MSE_train_simple(dataset, model, mse_loss, epoch)
+        loss_history.append(avg_loss)
         epoch_time = time() - epoch_start
         
         # Print progress every 5 epochs only
@@ -244,6 +334,11 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
             print(f"\n[QUICK EVAL - Epoch {epoch+1}]")
             results = Test_Simple(dataset, model, epoch, world.config['multicore'])
             
+            # Store metrics for plotting
+            recall_history.append(results['recall'][0])
+            precision_history.append(results['precision'][0])
+            ndcg_history.append(results['ndcg'][0])
+            
             # Track best performance
             current_recall = results['recall'][0]
             if current_recall > best_recall:
@@ -256,6 +351,9 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
     print(f"Total training time: {total_time:.2f}s")
     print(f"Best recall achieved: {best_recall:.6f}")
     print("="*70)
+    
+    # Save training plots
+    save_training_plots(loss_history, recall_history, precision_history, ndcg_history)
     
     return model
 
