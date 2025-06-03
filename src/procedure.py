@@ -17,8 +17,8 @@ import os
 
 CORES = multiprocessing.cpu_count() // 2
 
-class SimpleMSELoss:
-    """Simple MSE loss for collaborative filtering - Direct rating prediction"""
+class MSELoss:
+    """MSE loss for collaborative filtering - Direct rating prediction"""
     def __init__(self, model, config):
         self.model = model
         self.lr = config['lr']
@@ -31,18 +31,14 @@ class SimpleMSELoss:
         else:
             # Custom model with built-in optimizer
             self.opt = None  # Model handles its own optimization
-    
+        
     def compute_loss(self, users, target_ratings):
         """
         Compute MSE loss directly against observed ratings
         Much simpler - no negative sampling needed!
         """
-        # Get all predicted ratings for the batch of users
-        if hasattr(self.model, 'getUsersRating'):
-            # Use the standard interface
-            predicted_ratings = torch.from_numpy(self.model.getUsersRating(users.cpu().numpy(), world.dataset))
-        else:
-            predicted_ratings = self.model.getUsersRating(users)
+        # Get all predicted ratings for the batch of users using forward pass
+        predicted_ratings = self.model(users, target_ratings=None)  # None means prediction mode
         
         # Ensure it's on the right device
         if isinstance(predicted_ratings, np.ndarray):
@@ -98,7 +94,7 @@ def create_target_ratings(dataset, users):
     
     return target_ratings
 
-def MSE_train_simple(dataset, model, loss_class, epoch):
+def train(dataset, model, loss_class, epoch):
     """
     FIXED: Better user sampling strategy for training
     """
@@ -169,7 +165,7 @@ def test_one_batch_simple(X):
             'precision': np.array(pre), 
             'ndcg': np.array(ndcg)}
 
-def Test_Simple(dataset, model, epoch, multicore=0):
+def test(dataset, model, epoch, multicore=0):
     """
     ULTRA-FAST test procedure for training, COMPREHENSIVE for final eval
     """
@@ -373,7 +369,7 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
     
     plt.close('all')  # Close all figures to free memory
 
-def train_universal_spectral_simple(dataset, model, config, total_epochs=15, verbose=False):
+def train_universal_spectral(dataset, model, config, total_epochs=15, verbose=False):
     """
     FIXED: Better evaluation schedule and monitoring
     """
@@ -382,7 +378,7 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
     print("="*70)
     
     # Initialize MSE loss
-    mse_loss = SimpleMSELoss(model, config)
+    mse_loss = MSELoss(model, config)
     
     # Training history for plotting
     loss_history = []
@@ -398,7 +394,7 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
         epoch_start = time()
         
         # Training step
-        avg_loss, train_info = MSE_train_simple(dataset, model, mse_loss, epoch)
+        avg_loss, train_info = train(dataset, model, mse_loss, epoch)
         loss_history.append(avg_loss)
         epoch_time = time() - epoch_start
         
@@ -411,7 +407,7 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
         # FIXED: More frequent evaluation to track training progress
         if epoch == total_epochs // 3 or epoch == 2 * total_epochs // 3 or epoch == total_epochs - 1:
             print(f"\n[QUICK EVAL - Epoch {epoch+1}]")
-            results = Test_Simple(dataset, model, epoch, world.config['multicore'])
+            results = test(dataset, model, epoch, world.config['multicore'])
             
             # Store metrics for plotting
             recall_history.append(results['recall'][0])
@@ -441,18 +437,18 @@ def train_universal_spectral_simple(dataset, model, config, total_epochs=15, ver
     return model
 
 # Convenience function for main_u.py
-def simple_train_and_evaluate(dataset, model, config):
+def train_and_evaluate(dataset, model, config):
     """
     One-line training and evaluation for main_u.py
     """
     # Training with the epochs from config
-    trained_model = train_universal_spectral_simple(
+    trained_model = train_universal_spectral(
         dataset, model, config, 
         total_epochs=config.get('epochs', 15)  # Use config epochs
     )
     
     # Final comprehensive evaluation
     print("\n[FINAL COMPREHENSIVE EVALUATION - ALL USERS, ALL ITEMS]")
-    final_results = Test_Simple(dataset, trained_model, -1, world.config['multicore'])
+    final_results = test(dataset, trained_model, -1, world.config['multicore'])
     
     return trained_model, final_results

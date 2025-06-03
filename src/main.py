@@ -2,28 +2,18 @@ import world
 import utils
 from world import cprint
 import torch
-import SimpleProcedure  # Import our new simplified procedure
+import procedure  # Import our new simplified procedure
 from tqdm import tqdm
 import time
+import register
+from register import dataset
+from model import UniversalSpectralCF
 
 # ==============================
 utils.set_seed(world.seed)
 print(">>SEED:", world.seed)
-# ==============================
-import register
-from register import dataset
-
-# Initialize Universal Spectral CF model with optimized settings
-from model import UniversalSpectralCF
-
 print(f"Device: {world.device}")
-
-# Optimized configuration for faster training with direct MSE
-# config = world.config.copy()
-# config['filter_order'] = 2      # Simple filters for speed
-# config['n_eigen'] = 20          # Reduced eigenvalues for speed  
-# config['lr'] = 0.01             # Higher learning rate for direct MSE
-# config['epochs'] = 15           # Very few epochs needed with direct MSE
+# ==============================
 
 print("Creating Universal Spectral CF model...")
 model_start = time.time()
@@ -33,20 +23,17 @@ adj_mat = dataset.UserItemNet.tolil()
 
 # Create the model with proper config
 Recmodel = UniversalSpectralCF(adj_mat, world.config)
-
 # Initialize the model (precompute eigendecompositions)
 Recmodel.train()
-
 print(f"Model created in {time.time() - model_start:.2f}s")
-
-print("Initialized UniversalSpectralCF with direct MSE training (no negative sampling)")
+print("Initialized UniversalSpectralCF with direct MSE training")
 
 # Simple one-line training and evaluation
 print("Starting direct MSE-based training...")
 training_start = time.time()
 
 # Use the simplified training procedure
-trained_model, final_results = SimpleProcedure.simple_train_and_evaluate(
+trained_model, final_results = procedure.train_and_evaluate(
     dataset, Recmodel, world.config
 )
 
