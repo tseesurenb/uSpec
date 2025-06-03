@@ -582,7 +582,7 @@ class UniversalSpectralCF(PairWiseModel):
         print(f"Matrix loaded in {time.time() - start_time:.2f}s")
         
         # Configuration with reduced eigenvalues for speed
-        self.n_eigen = min(config.get("n_eigen", 30), 30)  # Limit to 30 for speed
+        self.n_eigen = config.get("n_eigen", 50)  # Limit to 30 for speed
         self.filter_order = config.get("filter_order", 3)  # Reduce order for speed
         
         print(f"UniversalSpectralCF: {self.n_users} users, {self.n_items} items")
