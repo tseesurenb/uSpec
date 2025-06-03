@@ -13,7 +13,7 @@ class BasicModel(nn.Module):
     
     def getUsersRating(self, users):
         raise NotImplementedError
-
+    
 class PairWiseModel(BasicModel):
     def __init__(self):
         super(PairWiseModel, self).__init__()
@@ -27,7 +27,44 @@ class PairWiseModel(BasicModel):
             (log-loss, l2-loss)
         """
         raise NotImplementedError
+        
+class GF_CF(object):
+    def __init__(self, adj_mat):
+        self.adj_mat = adj_mat
+        
+    def train(self):
+        adj_mat = self.adj_mat
+        start = time.time()
+        rowsum = np.array(adj_mat.sum(axis=1))
+        d_inv = np.power(rowsum, -0.5).flatten()
+        d_inv[np.isinf(d_inv)] = 0.
+        d_mat = sp.diags(d_inv)
+        norm_adj = d_mat.dot(adj_mat)
 
+        colsum = np.array(adj_mat.sum(axis=0))
+        d_inv = np.power(colsum, -0.5).flatten()
+        d_inv[np.isinf(d_inv)] = 0.
+        d_mat = sp.diags(d_inv)
+        self.d_mat_i = d_mat
+        self.d_mat_i_inv = sp.diags(1/d_inv)
+        norm_adj = norm_adj.dot(d_mat)
+        self.norm_adj = norm_adj.tocsc()
+        ut, s, self.vt = sparsesvd(self.norm_adj, 256)
+        end = time.time()
+        print('training time for GF-CF', end-start)
+        
+    def getUsersRating(self, batch_users, ds_name):
+        norm_adj = self.norm_adj
+        adj_mat = self.adj_mat
+        batch_test = np.array(adj_mat[batch_users,:].todense())
+        U_2 = batch_test @ norm_adj.T @ norm_adj
+        if(ds_name == 'amazon-book'):
+            ret = U_2
+        else:
+            U_1 = batch_test @  self.d_mat_i @ self.vt.T @ self.vt @ self.d_mat_i_inv
+            ret = U_2 + 0.3 * U_1
+        return ret
+        
 class ClosedFormSpectralCF(nn.Module):
     """
     Closed-form spectral CF with fixed polynomial filters (no learning)
@@ -240,27 +277,34 @@ class ClosedFormSpectralCF(nn.Module):
         
         print("=== END DEBUG ===\n")
 
+
+######################################################################################
+
+# Optimized version with progress bars and performance improvements
+# Add these imports to your model.py
+from tqdm import tqdm
+import time
+
 class UniversalSpectralFilter(nn.Module):
-    def __init__(self, filter_order=3):
+    """
+    Learnable universal spectral filter using Chebyshev polynomials
+    """
+    def __init__(self, filter_order=5):
         super().__init__()
         self.filter_order = filter_order
         
-        # FIXED: Better initialization to match old model behavior
-        self.coeffs = nn.Parameter(torch.zeros(filter_order + 1))
+        # Learnable polynomial coefficients - this is what gets trained!
+        self.coeffs = nn.Parameter(torch.randn(filter_order + 1) * 0.1)
         
-        # Initialize like the old model's fixed filters
+        # Initialize to be roughly low-pass
         with torch.no_grad():
-            if filter_order >= 0:
-                self.coeffs.data[0] = 1.0      # Base response
-            if filter_order >= 1:
-                self.coeffs.data[1] = -0.5     # First order damping
-            if filter_order >= 2:
-                self.coeffs.data[2] = 0.1      # Second order correction
-            if filter_order >= 3:
-                self.coeffs.data[3] = -0.02    # Higher order terms
+            init_coeffs = torch.tensor([1.0, -0.5, 0.1, -0.02, 0.005, 0.0])
+            self.coeffs.data[:len(init_coeffs)] = init_coeffs[:filter_order + 1]
     
     def forward(self, eigenvalues):
-        """Apply learnable spectral filter using Chebyshev polynomials"""
+        """
+        Apply learnable spectral filter using Chebyshev polynomials
+        """
         # Normalize eigenvalues to [-1, 1] for Chebyshev polynomials
         max_eigenval = torch.max(eigenvalues) + 1e-8
         eigenvals_norm = 2 * (eigenvalues / max_eigenval) - 1
@@ -284,257 +328,259 @@ class UniversalSpectralFilter(nn.Module):
                 filter_response += self.coeffs[i] * T_next
                 T_prev, T_curr = T_curr, T_next
         
-        # FIXED: Use exponential-like activation to match old model
-        # The old model used exp(-eigenvals * 2.0), so we mimic this behavior
-        filter_response = torch.exp(-torch.abs(filter_response)) + 1e-6
+        # Apply activation to ensure positive filter response
+        filter_response = torch.relu(filter_response) + 1e-6
         
         return filter_response
 
-class UniversalSpectralCF(object):
+class UniversalSpectralCF(PairWiseModel):
     """
-    FIXED: Universal Spectral CF that properly matches the old model's behavior
+    Optimized Universal Spectral Collaborative Filtering with progress tracking
     """
-    def __init__(self, adj_mat, config=None):
-        self.adj_mat = adj_mat
-        self.config = config if config else {}
-        self.device = self.config.get('device', 'cpu')
-        self.n_eigen = self.config.get('n_eigen', 50)  # Back to 50 like old model
-        self.filter_order = self.config.get('filter_order', 3)
-        self.lr = self.config.get('lr', 0.01)
-        self.filter = self.config.get('filter', 'ui')
+    def __init__(self, config, dataset):
+        super().__init__()
         
-        # Convert to tensor
-        if sp.issparse(self.adj_mat):
-            adj_dense = self.adj_mat.toarray()
+        self.config = config
+        self.dataset = dataset
+        
+        # Import world here if not available globally
+        try:
+            import world
+            self.device = world.device
+        except:
+            self.device = config.get('device', 'cpu')
+        
+        # Get adjacency matrix from dataset
+        print("Loading adjacency matrix...")
+        start_time = time.time()
+        
+        adj_mat = dataset.UserItemNet.tolil()
+        if sp.issparse(adj_mat):
+            print("Converting sparse matrix to dense...")
+            adj_mat_dense = adj_mat.toarray()
         else:
-            adj_dense = self.adj_mat
-            
-        self.adj_tensor = torch.tensor(adj_dense, dtype=torch.float32)
-        self.n_users, self.n_items = self.adj_tensor.shape
+            adj_mat_dense = adj_mat
         
-        # FIXED: Use the SAME normalization as old model
-        row_sums = self.adj_tensor.sum(dim=1, keepdim=True) + 1e-8
-        col_sums = self.adj_tensor.sum(dim=0, keepdim=True) + 1e-8
-        self.norm_adj = self.adj_tensor / torch.sqrt(row_sums) / torch.sqrt(col_sums)
+        self.adj_mat = torch.tensor(adj_mat_dense, dtype=torch.float32, device=self.device)
+        self.n_users, self.n_items = self.adj_mat.shape
         
-        # Store eigendecompositions
+        print(f"Matrix loaded in {time.time() - start_time:.2f}s")
+        
+        # Configuration with reduced eigenvalues for speed
+        self.n_eigen = config.get("n_eigen", 50)  # Limit to 30 for speed
+        self.filter_order = config.get("filter_order", 3)  # Reduce order for speed
+        
+        print(f"UniversalSpectralCF: {self.n_users} users, {self.n_items} items")
+        print(f"Using {self.n_eigen} eigenvalues, filter order {self.filter_order}")
+        
+        # Initialize learnable filters
+        self.user_filter = UniversalSpectralFilter(self.filter_order)
+        self.item_filter = UniversalSpectralFilter(self.filter_order)
+        
+        # Learnable combination weights
+        self.combination_weights = nn.Parameter(torch.tensor([0.5, 0.3, 0.2]))
+        
+        # Precomputed matrices (cached for efficiency)
         self.user_eigenvals = None
         self.user_eigenvecs = None
         self.item_eigenvals = None
         self.item_eigenvecs = None
-        self.user_filter = None
-        self.item_filter = None
         
-        # Cache for filter matrices
+        # Cache for reconstructed filter matrices (updated only when needed)
         self._cached_user_filter_matrix = None
         self._cached_item_filter_matrix = None
         self._cache_valid = False
+        
+        self._precompute_eigendecompositions()
     
-    def train(self, mode=True):
-        """Set training mode for nested PyTorch modules"""
-        if hasattr(self, 'user_filter') and self.user_filter is not None:
-            self.user_filter.train(mode)
-        if hasattr(self, 'item_filter') and self.item_filter is not None:
-            self.item_filter.train(mode)
-        return self
-    
-    def eval(self):
-        """Set evaluation mode for nested PyTorch modules"""
-        if hasattr(self, 'user_filter') and self.user_filter is not None:
-            self.user_filter.eval()
-        if hasattr(self, 'item_filter') and self.item_filter is not None:
-            self.item_filter.eval()
-        return self
+    def _precompute_eigendecompositions(self):
+        """
+        Precompute eigendecompositions with progress tracking
+        """
+        print("Computing eigendecompositions...")
+        total_start = time.time()
         
-    def train(self):
-        """Initialize the model - FIXED to match old model computation"""
-        start = time.time()
+        # Compute normalization
+        print("Computing matrix normalization...")
+        norm_start = time.time()
+        row_sums = self.adj_mat.sum(dim=1, keepdim=True) + 1e-8
+        col_sums = self.adj_mat.sum(dim=0, keepdim=True) + 1e-8
+        norm_adj = self.adj_mat / torch.sqrt(row_sums) / torch.sqrt(col_sums)
+        print(f"Normalization completed in {time.time() - norm_start:.2f}s")
         
-        print(f"Computing eigendecompositions for filter type: {self.filter}")
+        # Compute similarity matrices
+        print("Computing similarity matrices...")
+        sim_start = time.time()
+        user_similarity = norm_adj @ norm_adj.t()
+        item_similarity = norm_adj.t() @ norm_adj
+        print(f"Similarity matrices computed in {time.time() - sim_start:.2f}s")
         
-        # FIXED: Use the SAME similarity computation as old model
-        user_sim = self.norm_adj @ self.norm_adj.t()
-        item_sim = self.norm_adj.t() @ self.norm_adj
+        # Convert to numpy for eigendecomposition
+        user_sim_np = user_similarity.detach().cpu().numpy()
+        item_sim_np = item_similarity.detach().cpu().numpy()
         
-        # Only compute eigendecompositions for selected filters
-        if self.filter in ['u', 'ui']:
-            user_sim_np = user_sim.numpy()
+        # User eigendecomposition with progress
+        print("Computing user eigendecomposition...")
+        user_eigen_start = time.time()
+        try:
             k_user = min(self.n_eigen, self.n_users - 2)
-            try:
-                eigenvals, eigenvecs = eigsh(sp.csr_matrix(user_sim_np), k=k_user, which='LM')
-                self.user_eigenvals = torch.tensor(np.real(eigenvals), dtype=torch.float32)
-                self.user_eigenvecs = torch.tensor(np.real(eigenvecs), dtype=torch.float32)
-                self.user_filter = UniversalSpectralFilter(self.filter_order)
-                print(f"User eigendecomposition: {k_user} components")
-            except Exception as e:
-                print(f"User eigendecomposition failed: {e}")
-                self.user_eigenvals = torch.ones(min(self.n_eigen, self.n_users))
-                self.user_eigenvecs = torch.eye(self.n_users, min(self.n_eigen, self.n_users))
-                self.user_filter = UniversalSpectralFilter(self.filter_order)
+            eigenvals, eigenvecs = eigsh(sp.csr_matrix(user_sim_np), k=k_user, which='LM')
+            self.user_eigenvals = torch.tensor(np.real(eigenvals), dtype=torch.float32, device=self.device)
+            self.user_eigenvecs = torch.tensor(np.real(eigenvecs), dtype=torch.float32, device=self.device)
+            print(f"User eigendecomposition completed in {time.time() - user_eigen_start:.2f}s ({k_user} components)")
+        except Exception as e:
+            print(f"User eigendecomposition failed: {e}, using fallback")
+            k_user = min(self.n_eigen, self.n_users)
+            self.user_eigenvals = torch.ones(k_user, device=self.device)
+            self.user_eigenvecs = torch.eye(self.n_users, k_user, device=self.device)
         
-        if self.filter in ['i', 'ui']:
-            item_sim_np = item_sim.numpy()
+        # Item eigendecomposition with progress
+        print("Computing item eigendecomposition...")
+        item_eigen_start = time.time()
+        try:
             k_item = min(self.n_eigen, self.n_items - 2)
-            try:
-                eigenvals, eigenvecs = eigsh(sp.csr_matrix(item_sim_np), k=k_item, which='LM')
-                self.item_eigenvals = torch.tensor(np.real(eigenvals), dtype=torch.float32)
-                self.item_eigenvecs = torch.tensor(np.real(eigenvecs), dtype=torch.float32)
-                self.item_filter = UniversalSpectralFilter(self.filter_order)
-                print(f"Item eigendecomposition: {k_item} components")
-            except Exception as e:
-                print(f"Item eigendecomposition failed: {e}")
-                self.item_eigenvals = torch.ones(min(self.n_eigen, self.n_items))
-                self.item_eigenvecs = torch.eye(self.n_items, min(self.n_eigen, self.n_items))
-                self.item_filter = UniversalSpectralFilter(self.filter_order)
+            eigenvals, eigenvecs = eigsh(sp.csr_matrix(item_sim_np), k=k_item, which='LM')
+            self.item_eigenvals = torch.tensor(np.real(eigenvals), dtype=torch.float32, device=self.device)
+            self.item_eigenvecs = torch.tensor(np.real(eigenvecs), dtype=torch.float32, device=self.device)
+            print(f"Item eigendecomposition completed in {time.time() - item_eigen_start:.2f}s ({k_item} components)")
+        except Exception as e:
+            print(f"Item eigendecomposition failed: {e}, using fallback")
+            k_item = min(self.n_eigen, self.n_items)
+            self.item_eigenvals = torch.ones(k_item, device=self.device)
+            self.item_eigenvecs = torch.eye(self.n_items, k_item, device=self.device)
         
-        # FIXED: Set combination weights to match old model exactly
-        if self.filter == 'u':
-            self.combination_weights = nn.Parameter(torch.tensor([0.5, 0.5]))  # [direct, user]
-        elif self.filter == 'i':
-            self.combination_weights = nn.Parameter(torch.tensor([0.5, 0.5]))  # [direct, item]
-        else:  # 'ui' - MATCH OLD MODEL WEIGHTS EXACTLY
-            self.combination_weights = nn.Parameter(torch.tensor([0.5, 0.3, 0.2]))  # [direct, item, user]
-        
-        # Setup optimizer with only relevant parameters
-        params = [self.combination_weights]
-        if self.filter in ['u', 'ui'] and self.user_filter is not None:
-            params.extend(list(self.user_filter.parameters()))
-        if self.filter in ['i', 'ui'] and self.item_filter is not None:
-            params.extend(list(self.item_filter.parameters()))
-        self.optimizer = torch.optim.Adam(params, lr=self.lr)
-        
-        end = time.time()
-        print(f'Initialization time for Universal-SpectralCF ({self.filter}): {end-start:.2f}s')
+        print(f"Total eigendecomposition time: {time.time() - total_start:.2f}s")
+        print("Eigendecompositions completed!")
     
     def _get_filter_matrices(self):
-        """FIXED: Get filter matrices with proper reconstruction"""
+        """
+        Get filter matrices with caching for efficiency
+        """
         if not self._cache_valid:
-            # User filter matrix
-            if self.filter in ['u', 'ui'] and self.user_filter is not None:
-                user_filter_response = self.user_filter(self.user_eigenvals)
-                
-                # FIXED: Proper matrix reconstruction that matches old model
-                # For partial eigendecomposition, we need to be more careful
-                if self.user_eigenvecs.shape[0] == self.user_eigenvecs.shape[1]:
-                    # Full eigendecomposition
-                    self._cached_user_filter_matrix = self.user_eigenvecs @ torch.diag(user_filter_response) @ self.user_eigenvecs.t()
-                else:
-                    # Partial eigendecomposition - reconstruct the filtered similarity matrix
-                    # This is the key fix: we reconstruct the similarity matrix, not add to identity
-                    self._cached_user_filter_matrix = self.user_eigenvecs @ torch.diag(user_filter_response) @ self.user_eigenvecs.t()
+            # Recompute filter matrices only when coefficients change
+            user_filter_response = self.user_filter(self.user_eigenvals)
+            item_filter_response = self.item_filter(self.item_eigenvals)
             
-            # Item filter matrix  
-            if self.filter in ['i', 'ui'] and self.item_filter is not None:
-                item_filter_response = self.item_filter(self.item_eigenvals)
-                
-                # FIXED: Same reconstruction fix for items
-                if self.item_eigenvecs.shape[0] == self.item_eigenvecs.shape[1]:
-                    # Full eigendecomposition
-                    self._cached_item_filter_matrix = self.item_eigenvecs @ torch.diag(item_filter_response) @ self.item_eigenvecs.t()
-                else:
-                    # Partial eigendecomposition
-                    self._cached_item_filter_matrix = self.item_eigenvecs @ torch.diag(item_filter_response) @ self.item_eigenvecs.t()
+            self._cached_user_filter_matrix = self.user_eigenvecs @ torch.diag(user_filter_response) @ self.user_eigenvecs.t()
+            self._cached_item_filter_matrix = self.item_eigenvecs @ torch.diag(item_filter_response) @ self.item_eigenvecs.t()
             
             self._cache_valid = True
         
-        user_matrix = self._cached_user_filter_matrix if self.filter in ['u', 'ui'] else None
-        item_matrix = self._cached_item_filter_matrix if self.filter in ['i', 'ui'] else None
-        
-        return user_matrix, item_matrix
+        return self._cached_user_filter_matrix, self._cached_item_filter_matrix
     
-    def train_step(self, users, target_ratings):
-        """FIXED: Training step that invalidates cache properly"""
-        self._cache_valid = False  # Invalidate cache before training step
-        
-        self.optimizer.zero_grad()
-        
-        # Convert inputs to tensors if they're numpy arrays
-        if isinstance(users, np.ndarray):
-            users = torch.LongTensor(users)
-        if isinstance(target_ratings, np.ndarray):
-            target_ratings = torch.FloatTensor(target_ratings)
-        
-        user_profiles = self.adj_tensor[users]
-        direct_scores = user_profiles
-        
-        # Get filter matrices (will recompute due to cache invalidation)
+    def _invalidate_cache(self):
+        """Invalidate cache when parameters change"""
+        self._cache_valid = False
+    
+    def forward(self, users, items):
+        """
+        Forward pass for prediction (used in evaluation)
+        """
         user_filter_matrix, item_filter_matrix = self._get_filter_matrices()
         
-        # FIXED: Compute scores exactly like old model
-        if self.filter == 'u':
-            user_filter_rows = user_filter_matrix[users]
-            user_scores = user_filter_rows @ self.adj_tensor
-            weights = torch.softmax(self.combination_weights, dim=0)
-            predicted = weights[0] * direct_scores + weights[1] * user_scores
-            reg = self.user_filter.coeffs.norm(2).pow(2) * 1e-6
-            
-        elif self.filter == 'i':
-            item_scores = user_profiles @ item_filter_matrix
-            weights = torch.softmax(self.combination_weights, dim=0)
-            predicted = weights[0] * direct_scores + weights[1] * item_scores
-            reg = self.item_filter.coeffs.norm(2).pow(2) * 1e-6
-            
-        else:  # 'ui' - FIXED: Match old model computation exactly
-            item_scores = user_profiles @ item_filter_matrix
-            user_filter_rows = user_filter_matrix[users]
-            user_scores = user_filter_rows @ self.adj_tensor
-            weights = torch.softmax(self.combination_weights, dim=0)
-            predicted = weights[0] * direct_scores + weights[1] * item_scores + weights[2] * user_scores
-            reg = (self.user_filter.coeffs.norm(2).pow(2) + self.item_filter.coeffs.norm(2).pow(2)) * 1e-6
+        # Get user profiles
+        user_profiles = self.adj_mat[users]
         
-        loss = torch.mean((predicted - target_ratings) ** 2)
-        total_loss = loss + reg
+        # Apply spectral filtering
+        direct_scores = user_profiles
+        item_scores = user_profiles @ item_filter_matrix
+        user_filter_rows = user_filter_matrix[users]
+        user_scores = user_filter_rows @ self.adj_mat
         
-        total_loss.backward()
-        self.optimizer.step()
-        return total_loss.detach().item()
+        # Combine with learnable weights
+        weights = torch.softmax(self.combination_weights, dim=0)
+        combined_scores = (weights[0] * direct_scores + 
+                          weights[1] * item_scores + 
+                          weights[2] * user_scores)
         
-    def getUsersRating(self, batch_users, ds_name=None):
-        """FIXED: Evaluation that matches old model exactly"""
+        # Extract scores for specific items
+        item_scores_final = combined_scores[torch.arange(len(users)), items]
+        
+        return torch.sigmoid(item_scores_final)
+    
+    def bpr_loss(self, users, pos, neg):
+        """
+        BPR loss implementation with cache invalidation
+        """
+        # Invalidate cache since we're in training mode
+        self._invalidate_cache()
+        
+        # Apply learnable spectral filters
+        user_filter_response = self.user_filter(self.user_eigenvals)
+        item_filter_response = self.item_filter(self.item_eigenvals)
+        
+        # Reconstruct filtered matrices
+        user_filter_matrix = self.user_eigenvecs @ torch.diag(user_filter_response) @ self.user_eigenvecs.t()
+        item_filter_matrix = self.item_eigenvecs @ torch.diag(item_filter_response) @ self.item_eigenvecs.t()
+        
+        # Get user profiles for this batch
+        batch_user_profiles = self.adj_mat[users]
+        
+        # Apply spectral filtering
+        direct_scores = batch_user_profiles
+        item_scores = batch_user_profiles @ item_filter_matrix
+        user_filter_rows = user_filter_matrix[users]
+        user_scores = user_filter_rows @ self.adj_mat
+        
+        # Combine with learnable weights
+        weights = torch.softmax(self.combination_weights, dim=0)
+        combined_scores = (weights[0] * direct_scores + 
+                          weights[1] * item_scores + 
+                          weights[2] * user_scores)
+        
+        # Extract scores for positive and negative items
+        pos_scores = combined_scores[torch.arange(len(users)), pos]
+        neg_scores = combined_scores[torch.arange(len(users)), neg]
+        
+        # BPR loss
+        loss = torch.mean(torch.nn.functional.softplus(neg_scores - pos_scores))
+        
+        # L2 regularization on filter coefficients
+        reg_loss = (self.user_filter.coeffs.norm(2).pow(2) + 
+                   self.item_filter.coeffs.norm(2).pow(2) + 
+                   self.combination_weights.norm(2).pow(2)) * 1e-5
+        
+        return loss, reg_loss
+    
+    def getUsersRating(self, users):
+        """
+        Get ratings for all items (evaluation interface) with caching
+        """
+        self.eval()
         with torch.no_grad():
-            user_profiles = self.adj_tensor[batch_users]
-            direct_scores = user_profiles
-            
-            # Get cached filter matrices
             user_filter_matrix, item_filter_matrix = self._get_filter_matrices()
             
-            # FIXED: Compute scores exactly like old model
-            if self.filter == 'u':
-                user_filter_rows = user_filter_matrix[batch_users]
-                user_scores = user_filter_rows @ self.adj_tensor
-                weights = torch.softmax(self.combination_weights, dim=0)
-                combined = weights[0] * direct_scores + weights[1] * user_scores
-                
-            elif self.filter == 'i':
-                item_scores = user_profiles @ item_filter_matrix
-                weights = torch.softmax(self.combination_weights, dim=0)
-                combined = weights[0] * direct_scores + weights[1] * item_scores
-                
-            else:  # 'ui' - EXACTLY like old model
-                item_scores = user_profiles @ item_filter_matrix
-                user_filter_rows = user_filter_matrix[batch_users]
-                user_scores = user_filter_rows @ self.adj_tensor
-                weights = torch.softmax(self.combination_weights, dim=0)
-                combined = weights[0] * direct_scores + weights[1] * item_scores + weights[2] * user_scores
+            # Compute scores for all items
+            batch_user_profiles = self.adj_mat[users]
             
-        return combined.numpy()
-
+            direct_scores = batch_user_profiles
+            item_scores = batch_user_profiles @ item_filter_matrix
+            user_filter_rows = user_filter_matrix[users]
+            user_scores = user_filter_rows @ self.adj_mat
+            
+            weights = torch.softmax(self.combination_weights, dim=0)
+            combined_scores = (weights[0] * direct_scores + 
+                             weights[1] * item_scores + 
+                             weights[2] * user_scores)
+        
+        return combined_scores
+    
     def debug_filter_learning(self):
-        """Debug what the filters are learning"""
+        """
+        Debug what the filters are learning
+        """
         print("\n=== FILTER LEARNING DEBUG ===")
         with torch.no_grad():
-            if self.filter in ['u', 'ui'] and self.user_filter is not None:
-                print(f"User filter coefficients: {self.user_filter.coeffs.cpu().numpy()}")
-            if self.filter in ['i', 'ui'] and self.item_filter is not None:
-                print(f"Item filter coefficients: {self.item_filter.coeffs.cpu().numpy()}")
+            print(f"User filter coefficients: {self.user_filter.coeffs.cpu().numpy()}")
+            print(f"Item filter coefficients: {self.item_filter.coeffs.cpu().numpy()}")
             
             weights = torch.softmax(self.combination_weights, dim=0)
             print(f"Combination weights: {weights.cpu().numpy()}")
             
-            if self.filter in ['u', 'ui'] and self.user_filter is not None:
-                user_response = self.user_filter(self.user_eigenvals)
-                print(f"User filter response range: [{user_response.min():.4f}, {user_response.max():.4f}]")
-            if self.filter in ['i', 'ui'] and self.item_filter is not None:
-                item_response = self.item_filter(self.item_eigenvals)
-                print(f"Item filter response range: [{item_response.min():.4f}, {item_response.max():.4f}]")
+            # Sample filter responses
+            user_response = self.user_filter(self.user_eigenvals)
+            item_response = self.item_filter(self.item_eigenvals)
+            
+            print(f"User filter response range: [{user_response.min():.4f}, {user_response.max():.4f}]")
+            print(f"Item filter response range: [{item_response.min():.4f}, {item_response.max():.4f}]")
         print("=== END DEBUG ===\n")

@@ -32,5 +32,6 @@ print('===========end===================')
 # }
 
 MODELS = {
-    'universal-spectral': model.UniversalSpectralCF  # Add this line
+    'cf': model.ClosedFormSpectralCF,
+    'uspec': model.UniversalSpectralCF  # Add this line
 }
