@@ -15,29 +15,6 @@ args = parse_args()
 
 ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # This will be /home/madmin/uSpec
 
-# config = {}
-# all_dataset = ['lastfm', 'gowalla', 'yelp2018', 'amazon-book']
-# all_models  = ['uspec']
-# config['multicore'] = args.multicore
-# config['dataset'] = args.dataset
-# config['test_u_batch_size'] = args.testbatch
-# config['lr'] = args.lr
-# config['decay'] = args.decay
-# config['i_K'] = args.i_K
-# config['u_K'] = args.u_K
-# config['n_eigen'] = args.n_eigen
-# config['s_temp'] = args.s_temp
-# config['epochs']= args.epochs
-# config['filter']= args.filter
-# config['filter_order'] = args.filter_order  # Polynomial order for spectral filters
-# config['verbose']= args.verbose
-# config['A_split'] = False
-# config['A_n_fold'] = args.a_fold
-# config['n_epoch_eval'] = args.n_epoch_eval
-# config['m_type'] = args.m_type
-# config['u_batch'] = args.u_batch  # or -1 for full dataset
-# config['val_ratio'] = args.val_ratio
-
 config = {}
 all_dataset = ['lastfm', 'gowalla', 'yelp2018', 'amazon-book']
 all_models  = ['uspec']
