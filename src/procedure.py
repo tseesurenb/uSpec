@@ -24,36 +24,32 @@ class MSELoss:
     def __init__(self, model, config):
         self.model = model
         self.lr = config['lr']
-        self.weight_decay = config.get('decay', 1e-4)
+        self.weight_decay = config['decay']
         
         self.opt = torch.optim.Adam(model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         
     def compute_loss(self, users, target_ratings):
+        """Clean loss computation - model only predicts"""
+        # Get predictions from model (clean interface)
+        predicted_ratings = self.model(users)
         
-        predicted_ratings = self.model(users, target_ratings=None)
-        
+        # Convert to tensor if needed
         if isinstance(predicted_ratings, np.ndarray):
             predicted_ratings = torch.from_numpy(predicted_ratings).to(world.device)
         
+        # Compute MSE loss externally
         mse_loss = torch.mean((predicted_ratings - target_ratings) ** 2)
-        reg_loss = 0.0
-        if hasattr(self.model, 'user_filter') and hasattr(self.model.user_filter, 'coeffs'):
-            reg_loss += self.model.user_filter.coeffs.norm(2).pow(2) * 1e-6
-        if hasattr(self.model, 'item_filter') and hasattr(self.model.item_filter, 'coeffs'):
-            reg_loss += self.model.item_filter.coeffs.norm(2).pow(2) * 1e-6
         
-        return mse_loss + reg_loss
+        # Adam's weight_decay handles regularization automatically
+        # No need for manual regularization since Adam applies L2 reg to all parameters
+        return mse_loss
     
     def train_step(self, users, target_ratings):
-        """Single training step - much simpler!"""
+        """Single training step - clean and simple"""
         self.opt.zero_grad()
         loss = self.compute_loss(users, target_ratings)
         loss.backward()
         self.opt.step()
-        
-        # Invalidate the model's cache since parameters changed
-        if hasattr(self.model, '_invalidate_cache'):
-            self.model._invalidate_cache()
         
         return loss.cpu().item()
     
@@ -71,68 +67,83 @@ def create_target_ratings(dataset, users):
     
     return target_ratings
 
-def train(dataset, model, loss_class, epoch):
-    model.train()
+# def train(dataset, model, loss_class, epoch):
+#     model.train()
 
-    mse_loss = loss_class
+#     mse_loss = loss_class
 
-    n_users = dataset.n_users
-    batch_size = 512  # Increased batch size for better coverage
+#     n_users = dataset.n_users
+#     batch_size = world.config['u_batch']
+
+#     if world.config['u_batch'] == -1:
+#         # Use full dataset for training
+#         users_per_epoch = n_users
+#         batch_size = n_users
+
+
     
-    # FIXED: Better sampling strategy - ensure all users are seen over time
-    users_per_epoch = min(n_users, max(2000, n_users // 3))  # Increased coverage
-    n_batch = users_per_epoch // batch_size
+#     #batch_size = config['u_batch']  # Increased batch size for better coverage
     
-    total_loss = 0.0
-    start_time = time()
+#     # FIXED: Better sampling strategy - ensure all users are seen over time
+#     users_per_epoch = min(n_users, max(2000, n_users // 3))  # Increased coverage
+#     n_batch = users_per_epoch // batch_size
     
-    # FIXED: Use random sampling with better coverage
-    # Sample different users each epoch to ensure full dataset coverage
-    np.random.seed(epoch * 42)  # Different seed each epoch for variety
-    sampled_users = np.random.choice(n_users, users_per_epoch, replace=False)
+#     total_loss = 0.0
+#     start_time = time()
     
-    for batch_idx in range(n_batch):
-        # Get batch of users
-        start_idx = batch_idx * batch_size
-        end_idx = min(start_idx + batch_size, users_per_epoch)
+#     # FIXED: Use random sampling with better coverage
+#     # Sample different users each epoch to ensure full dataset coverage
+#     np.random.seed(epoch * 42)  # Different seed each epoch for variety
+#     sampled_users = np.random.choice(n_users, users_per_epoch, replace=False)
+    
+#     for batch_idx in range(n_batch):
+#         # Get batch of users
+#         start_idx = batch_idx * batch_size
+#         end_idx = min(start_idx + batch_size, users_per_epoch)
         
-        user_indices = sampled_users[start_idx:end_idx]
+#         user_indices = sampled_users[start_idx:end_idx]
         
-        users = torch.LongTensor(user_indices).to(world.device)
+#         users = torch.LongTensor(user_indices).to(world.device)
         
-        # Create target ratings
-        target_ratings = create_target_ratings(dataset, user_indices)
-        target_ratings = target_ratings.to(world.device)
+#         # Create target ratings
+#         target_ratings = create_target_ratings(dataset, user_indices)
+#         target_ratings = target_ratings.to(world.device)
         
-        # Training step
-        batch_loss = mse_loss.train_step(users, target_ratings)
-        total_loss += batch_loss
+#         # Training step
+#         batch_loss = mse_loss.train_step(users, target_ratings)
+#         total_loss += batch_loss
     
-    # Ensure we have at least one batch
-    if n_batch == 0:
-        n_batch = 1
-        users = torch.LongTensor(np.random.choice(n_users, min(batch_size, n_users), replace=False)).to(world.device)
-        target_ratings = create_target_ratings(dataset, users.cpu().numpy())
-        target_ratings = target_ratings.to(world.device)
-        batch_loss = mse_loss.train_step(users, target_ratings)
-        total_loss = batch_loss
+#     # Ensure we have at least one batch
+#     if n_batch == 0:
+#         n_batch = 1
+#         users = torch.LongTensor(np.random.choice(n_users, min(batch_size, n_users), replace=False)).to(world.device)
+#         target_ratings = create_target_ratings(dataset, users.cpu().numpy())
+#         target_ratings = target_ratings.to(world.device)
+#         batch_loss = mse_loss.train_step(users, target_ratings)
+#         total_loss = batch_loss
     
-    avg_loss = total_loss / n_batch
-    training_time = time() - start_time
+#     avg_loss = total_loss / n_batch
+#     training_time = time() - start_time
     
-    return avg_loss, f"MSE_loss: {avg_loss:.4f} | Batches: {n_batch} | Users/epoch: {users_per_epoch} | Coverage: {100*users_per_epoch/n_users:.1f}% | Time: {training_time:.2f}s"
+#     return avg_loss, f"MSE_loss: {avg_loss:.4f} | Batches: {n_batch} | Users/epoch: {users_per_epoch} | Coverage: {100*users_per_epoch/n_users:.1f}% | Time: {training_time:.2f}s"
 
 def test_one_batch_simple(X):
-    """Same as original but simplified"""
+    """Compute metrics using utils functions"""
     sorted_items = X[0].numpy()
     groundTrue = X[1]
+    
+    # Use utils.getLabel to convert predictions to binary relevance
     r = utils.getLabel(groundTrue, sorted_items)
+    
+    # Compute metrics for all k values
     pre, recall, ndcg = [], [], []
     for k in world.topks:
+        # Use utils functions for metric computation
         ret = utils.RecallPrecision_ATk(groundTrue, r, k)
         pre.append(ret['precision'])
         recall.append(ret['recall'])
         ndcg.append(utils.NDCGatK_r(groundTrue, r, k))
+    
     return {'recall': np.array(recall), 
             'precision': np.array(pre), 
             'ndcg': np.array(ndcg)}
@@ -210,7 +221,7 @@ def test(dataset, model, epoch, multicore=0):
             
             batch_users_gpu = torch.LongTensor(batch_users).to(world.device)
             
-            # Get ratings from model
+            # Get ratings from model (clean interface - only predictions)
             rating = model.getUsersRating(batch_users_gpu)
             
             # Convert to tensor if needed
@@ -257,13 +268,87 @@ def test(dataset, model, epoch, multicore=0):
     
     return results
 
+def count_parameters(model):
+    """Count total and trainable parameters in the model"""
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    
+    # Get parameter breakdown by name
+    param_breakdown = {}
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            param_breakdown[name] = param.numel()
+    
+    return total_params, trainable_params, param_breakdown
+
+def print_model_info(model, config):
+    """Print comprehensive model information"""
+    total_params, trainable_params, param_breakdown = count_parameters(model)
+    
+    print("\n" + "="*70)
+    print("📊 MODEL PARAMETER ANALYSIS")
+    print("="*70)
+    print(f"🏗️  Model Type: {config.get('m_type', 'unknown')} similarity")
+    print(f"🔧 Filter Type: {config.get('filter', 'unknown')}")
+    print(f"📐 Filter Order: {config.get('filter_order', 'unknown')}")
+    print(f"🎯 Eigenvalues: {config.get('n_eigen', 'unknown')}")
+    
+    print(f"\n📈 PARAMETER SUMMARY:")
+    print(f"   └─ Total parameters: {total_params:,}")
+    print(f"   └─ Trainable parameters: {trainable_params:,}")
+    print(f"   └─ Non-trainable parameters: {total_params - trainable_params:,}")
+    
+    print(f"\n🔍 TRAINABLE PARAMETER BREAKDOWN:")
+    for name, count in param_breakdown.items():
+        # Make parameter names more readable
+        if 'coeffs' in name:
+            if 'user_pos' in name:
+                display_name = "User Positive Filter Coeffs"
+            elif 'user_neg' in name:
+                display_name = "User Negative Filter Coeffs"
+            elif 'item_pos' in name:
+                display_name = "Item Positive Filter Coeffs"
+            elif 'item_neg' in name:
+                display_name = "Item Negative Filter Coeffs"
+            elif 'user' in name:
+                display_name = "User Filter Coeffs"
+            elif 'item' in name:
+                display_name = "Item Filter Coeffs"
+            else:
+                display_name = name
+        elif 'combination_weights' in name:
+            display_name = "Combination Weights"
+        else:
+            display_name = name
+            
+        print(f"   └─ {display_name}: {count} params")
+    
+    # Calculate model efficiency metrics
+    n_users = model.n_users if hasattr(model, 'n_users') else 0
+    n_items = model.n_items if hasattr(model, 'n_items') else 0
+    total_interactions = n_users * n_items
+    
+    if total_interactions > 0:
+        efficiency = total_interactions / trainable_params
+        print(f"\n⚡ EFFICIENCY METRICS:")
+        print(f"   └─ Users: {n_users:,}")
+        print(f"   └─ Items: {n_items:,}")
+        print(f"   └─ Potential interactions: {total_interactions:,}")
+        print(f"   └─ Interactions per parameter: {efficiency:,.0f}")
+        print(f"   └─ Parameter efficiency: {100 * trainable_params / total_interactions:.6f}%")
+    
+    print("="*70)
+
 def train_universal_spectral(dataset, model, config, total_epochs=15, verbose=1):
     """
-    FIXED: Better evaluation schedule and monitoring
+    Enhanced training with parameter analysis, best model tracking and early stopping
     """
     print("="*70)
-    print("STARTING ULTRA-FAST DIRECT MSE TRAINING")
+    print("STARTING CLEAN EXTERNAL MSE TRAINING WITH EARLY STOPPING")
     print("="*70)
+    
+    # Print model parameter information
+    print_model_info(model, config)
     
     # Initialize MSE loss
     mse_loss = MSELoss(model, config)
@@ -274,8 +359,25 @@ def train_universal_spectral(dataset, model, config, total_epochs=15, verbose=1)
     precision_history = []
     ndcg_history = []
     
-    # Training loop with progress tracking
+    # Best model tracking
+    best_ndcg = 0.0
     best_recall = 0.0
+    best_precision = 0.0
+    best_epoch = 0
+    best_model_state = None
+    
+    # Early stopping parameters (adjusted for small models)
+    patience = config.get('patience', 5)  # Reduced for few-parameter models
+    min_delta = config.get('min_delta', 1e-5)  # Slightly relaxed threshold
+    no_improvement_count = 0
+    
+    print(f"\n🎯 TRAINING CONFIGURATION:")
+    print(f"   └─ Total epochs: {total_epochs}")
+    print(f"   └─ Early stopping patience: {patience}")
+    print(f"   └─ Minimum improvement: {min_delta}")
+    print(f"   └─ Learning rate: {config.get('lr', 'unknown')}")
+    print(f"   └─ Weight decay: {config.get('decay', 'unknown')}")
+    
     training_start = time()
     
     for epoch in tqdm(range(total_epochs), desc="Training Progress"):
@@ -292,40 +394,86 @@ def train_universal_spectral(dataset, model, config, total_epochs=15, verbose=1)
                 print(f"\nEpoch {epoch+1}/{total_epochs}: {train_info}")
                 model.debug_filter_learning()
         
-        # FIXED: More frequent evaluation to track training progress
+        # Evaluation schedule
         n_epoch_eval = config.get('n_epoch_eval', 5)  # Default every 5 epochs
         if (epoch + 1) % n_epoch_eval == 0 or epoch == total_epochs - 1:
-        #if epoch == total_epochs // 3 or epoch == 2 * total_epochs // 3 or epoch == total_epochs - 1:
             print(f"\n[QUICK EVAL - Epoch {epoch+1}]")
             results = test(dataset, model, epoch, world.config['multicore'])
             
             # Store metrics for plotting
-            recall_history.append(results['recall'][0])
-            precision_history.append(results['precision'][0])
-            ndcg_history.append(results['ndcg'][0])
-            
-            # Track best performance
             current_recall = results['recall'][0]
-            if current_recall > best_recall:
-                best_recall = current_recall
-                print(f"✅ New best recall: {best_recall:.6f}")
+            current_precision = results['precision'][0]
+            current_ndcg = results['ndcg'][0]
             
-            # Early stopping if performance degrades significantly
-            if len(recall_history) > 1 and current_recall < 0.7 * max(recall_history):
-                print(f"⚠️  Performance dropped significantly, consider stopping early")
+            recall_history.append(current_recall)
+            precision_history.append(current_precision)
+            ndcg_history.append(current_ndcg)
+            
+            # Check if this is the best model so far
+            # Priority: NDCG first, then Recall if NDCG is tied
+            is_best = False
+            improvement_msg = ""
+            
+            if current_ndcg > best_ndcg + min_delta:
+                # NDCG improved significantly
+                is_best = True
+                improvement_msg = f"🎯 New best NDCG: {current_ndcg:.6f} (prev: {best_ndcg:.6f})"
+            elif abs(current_ndcg - best_ndcg) <= min_delta and current_recall > best_recall + min_delta:
+                # NDCG is tied, but Recall improved
+                is_best = True
+                improvement_msg = f"🎯 NDCG tied, but new best Recall: {current_recall:.6f} (prev: {best_recall:.6f})"
+            
+            if is_best:
+                # Save best model state
+                best_ndcg = current_ndcg
+                best_recall = current_recall
+                best_precision = current_precision
+                best_epoch = epoch + 1
+                best_model_state = {key: value.cpu().clone() for key, value in model.state_dict().items()}
+                no_improvement_count = 0
+                print(f"✅ {improvement_msg}")
+                print(f"📊 Best performance at epoch {best_epoch}: NDCG={best_ndcg:.6f}, Recall={best_recall:.6f}, Precision={best_precision:.6f}")
+            else:
+                no_improvement_count += 1
+                print(f"📈 Current: NDCG={current_ndcg:.6f}, Recall={current_recall:.6f}, Precision={current_precision:.6f}")
+                print(f"🏆 Best remains at epoch {best_epoch}: NDCG={best_ndcg:.6f}, Recall={best_recall:.6f}")
+                print(f"⏳ No improvement for {no_improvement_count}/{patience} evaluations")
+            
+            # Early stopping check
+            if no_improvement_count >= patience:
+                print(f"\n🛑 Early stopping triggered! No improvement for {patience} consecutive evaluations.")
+                print(f"🏆 Best model was at epoch {best_epoch}")
+                break
     
     total_time = time() - training_start
+    
+    # Restore best model
+    if best_model_state is not None:
+        print(f"\n🔄 Restoring best model from epoch {best_epoch}...")
+        model.load_state_dict(best_model_state)
+        print(f"✅ Best model restored successfully!")
+    
+    # Final parameter efficiency report
+    total_params, trainable_params, _ = count_parameters(model)
+    
     print(f"\n" + "="*70)
-    print("ULTRA-FAST TRAINING COMPLETED!")
+    print("CLEAN EXTERNAL MSE TRAINING COMPLETED!")
     print(f"Total training time: {total_time:.2f}s")
-    print(f"Best recall achieved: {best_recall:.6f}")
+    print(f"🏆 BEST PERFORMANCE (Epoch {best_epoch}):")
+    print(f"   └─ NDCG@20: {best_ndcg:.6f}")
+    print(f"   └─ Recall@20: {best_recall:.6f}")
+    print(f"   └─ Precision@20: {best_precision:.6f}")
+    print(f"📊 FINAL MODEL STATS:")
+    print(f"   └─ Trainable parameters: {trainable_params:,}")
+    print(f"   └─ Training efficiency: {trainable_params/total_time:.1f} params/second")
+    if no_improvement_count >= patience:
+        print(f"🛑 Training stopped early due to no improvement for {patience} evaluations")
     print("="*70)
     
-    # Save training plots
-    save_training_plots(loss_history, recall_history, precision_history, ndcg_history)
+    # Save training plots with best epoch marked
+    save_training_plots(loss_history, recall_history, precision_history, ndcg_history, best_epoch)
     
     return model
-
 # Convenience function for main_u.py
 def train_and_evaluate(dataset, model, config):
     """
@@ -344,10 +492,73 @@ def train_and_evaluate(dataset, model, config):
     
     return trained_model, final_results
 
+def train(dataset, model, loss_class, epoch):
+    model.train()
 
-def save_training_plots(loss_history, recall_history, precision_history, ndcg_history, save_dir="./plots"):
+    mse_loss = loss_class
+
+    n_users = dataset.n_users
+    
+    # Handle configurable batch size with -1 for full dataset
+    if world.config['u_batch'] == -1:
+        # Use full dataset for training
+        batch_size = n_users
+        users_per_epoch = n_users
+        print(f"Using full dataset: {n_users} users in single batch")
+    else:
+        batch_size = world.config['u_batch']
+        # FIXED: Better sampling strategy - ensure all users are seen over time
+        users_per_epoch = min(n_users, max(2000, n_users // 3))  # Increased coverage
+    
+    n_batch = users_per_epoch // batch_size
+    
+    total_loss = 0.0
+    start_time = time()
+    
+    # FIXED: Use random sampling with better coverage
+    # Sample different users each epoch to ensure full dataset coverage
+    np.random.seed(epoch * 42)  # Different seed each epoch for variety
+    sampled_users = np.random.choice(n_users, users_per_epoch, replace=False)
+    
+    for batch_idx in range(n_batch):
+        # Get batch of users
+        start_idx = batch_idx * batch_size
+        end_idx = min(start_idx + batch_size, users_per_epoch)
+        
+        user_indices = sampled_users[start_idx:end_idx]
+        
+        users = torch.LongTensor(user_indices).to(world.device)
+        
+        # Create target ratings
+        target_ratings = create_target_ratings(dataset, user_indices)
+        target_ratings = target_ratings.to(world.device)
+        
+        # Training step
+        batch_loss = mse_loss.train_step(users, target_ratings)
+        total_loss += batch_loss
+        
+        # For full dataset mode, break after first batch
+        if world.config['u_batch'] == -1:
+            break
+    
+    # Ensure we have at least one batch
+    if n_batch == 0:
+        n_batch = 1
+        users = torch.LongTensor(np.random.choice(n_users, min(batch_size, n_users), replace=False)).to(world.device)
+        target_ratings = create_target_ratings(dataset, users.cpu().numpy())
+        target_ratings = target_ratings.to(world.device)
+        batch_loss = mse_loss.train_step(users, target_ratings)
+        total_loss = batch_loss
+    
+    avg_loss = total_loss / n_batch
+    training_time = time() - start_time
+    
+    return avg_loss, f"MSE_loss: {avg_loss:.4f} | Batches: {n_batch} | Users/epoch: {users_per_epoch} | Coverage: {100*users_per_epoch/n_users:.1f}% | Time: {training_time:.2f}s"
+
+
+def save_training_plots(loss_history, recall_history, precision_history, ndcg_history, best_epoch=None, save_dir="./plots"):
     """
-    Save training plots: loss, recall vs precision, and NDCG
+    Save training plots with best epoch marked: loss, recall vs precision, and NDCG
     """
     # Create plots directory if it doesn't exist
     os.makedirs(save_dir, exist_ok=True)
@@ -371,6 +582,19 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
         axes[0, 1].set_xlabel('Precision@20')
         axes[0, 1].set_ylabel('Recall@20')
         axes[0, 1].grid(True, alpha=0.3)
+        
+        # Mark best epoch if provided
+        if best_epoch is not None and len(recall_history) > 0:
+            # Find the evaluation point corresponding to best epoch
+            n_epoch_eval = 5  # Default evaluation frequency
+            best_eval_idx = (best_epoch - 1) // n_epoch_eval
+            if best_eval_idx < len(recall_history):
+                best_p = precision_history[best_eval_idx]
+                best_r = recall_history[best_eval_idx]
+                axes[0, 1].scatter([best_p], [best_r], color='red', s=100, marker='*', 
+                                 label=f'Best (Epoch {best_epoch})', zorder=5)
+                axes[0, 1].legend()
+        
         # Add points for each evaluation
         for i, (p, r) in enumerate(zip(precision_history, recall_history)):
             axes[0, 1].annotate(f'E{i+1}', (p, r), xytext=(5, 5), textcoords='offset points', fontsize=8)
@@ -383,6 +607,16 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
         axes[1, 0].set_xlabel('Evaluation Point')
         axes[1, 0].set_ylabel('NDCG@20')
         axes[1, 0].grid(True, alpha=0.3)
+        
+        # Mark best epoch
+        if best_epoch is not None:
+            n_epoch_eval = 5
+            best_eval_idx = (best_epoch - 1) // n_epoch_eval
+            if best_eval_idx < len(ndcg_history):
+                axes[1, 0].scatter([best_eval_idx + 1], [ndcg_history[best_eval_idx]], 
+                                 color='red', s=100, marker='*', 
+                                 label=f'Best (Epoch {best_epoch})', zorder=5)
+                axes[1, 0].legend()
     
     # Plot 4: All metrics together
     if len(recall_history) > 0:
@@ -390,6 +624,15 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
         axes[1, 1].plot(eval_points, recall_history, 'b-', linewidth=2, marker='o', label='Recall@20')
         axes[1, 1].plot(eval_points, precision_history, 'g-', linewidth=2, marker='s', label='Precision@20')
         axes[1, 1].plot(eval_points, ndcg_history, 'r-', linewidth=2, marker='^', label='NDCG@20')
+        
+        # Mark best epoch
+        if best_epoch is not None:
+            n_epoch_eval = 5
+            best_eval_idx = (best_epoch - 1) // n_epoch_eval
+            if best_eval_idx < len(recall_history):
+                axes[1, 1].axvline(x=best_eval_idx + 1, color='red', linestyle='--', alpha=0.7, 
+                                 label=f'Best Epoch {best_epoch}')
+        
         axes[1, 1].set_title('All Metrics Over Training', fontsize=14, fontweight='bold')
         axes[1, 1].set_xlabel('Evaluation Point')
         axes[1, 1].set_ylabel('Metric Value')
@@ -398,12 +641,17 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
     
     plt.tight_layout()
     
-    # Save the plot
-    plot_path = os.path.join(save_dir, f"training_plots_{int(time())}.png")
+    # Save the plot with best epoch info in filename
+    timestamp = int(time())
+    if best_epoch is not None:
+        plot_path = os.path.join(save_dir, f"training_plots_best_epoch_{best_epoch}_{timestamp}.png")
+    else:
+        plot_path = os.path.join(save_dir, f"training_plots_{timestamp}.png")
+    
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     print(f"\n📊 Training plots saved to: {plot_path}")
     
-    # Also save individual plots
+    # Also save individual plots with best epoch marked
     individual_plots = {
         'loss': (loss_history, 'Training Loss', 'Epoch', 'MSE Loss', 'b-'),
         'recall': (recall_history, 'Recall@20 Over Training', 'Evaluation', 'Recall@20', 'r-'),
@@ -416,6 +664,16 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
             plt.figure(figsize=(8, 6))
             x_data = range(1, len(data) + 1)
             plt.plot(x_data, data, style, linewidth=2, marker='o')
+            
+            # Mark best epoch
+            if best_epoch is not None and name != 'loss':
+                n_epoch_eval = 5
+                best_eval_idx = (best_epoch - 1) // n_epoch_eval
+                if best_eval_idx < len(data):
+                    plt.axvline(x=best_eval_idx + 1, color='red', linestyle='--', alpha=0.7, 
+                              label=f'Best Epoch {best_epoch}')
+                    plt.legend()
+            
             plt.title(title, fontsize=14, fontweight='bold')
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
@@ -423,7 +681,10 @@ def save_training_plots(loss_history, recall_history, precision_history, ndcg_hi
             if name == 'loss':
                 plt.yscale('log')
             
-            individual_path = os.path.join(save_dir, f"{name}_plot_{int(time())}.png")
+            if best_epoch is not None:
+                individual_path = os.path.join(save_dir, f"{name}_plot_best_epoch_{best_epoch}_{timestamp}.png")
+            else:
+                individual_path = os.path.join(save_dir, f"{name}_plot_{timestamp}.png")
             plt.savefig(individual_path, dpi=300, bbox_inches='tight')
             plt.close()
     

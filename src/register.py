@@ -8,7 +8,6 @@ PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
 import world
 import dataloader
 import model_single
-import utils
 from pprint import pprint
 
 if world.dataset in ['gowalla', 'yelp2018', 'amazon-book']:
@@ -16,13 +15,14 @@ if world.dataset in ['gowalla', 'yelp2018', 'amazon-book']:
 elif world.dataset == 'lastfm':
     dataset = dataloader.LastFM()
 
-print('===========config================')
-pprint(world.config)
-print("Test Topks:", world.topks)
-print('===========end===================')
+if world.config['verbose'] > 0:
+    print('===========config================')
+    pprint(world.config)
+    print("Test Topks:", world.topks)
+    print('===========end===================')
 
 MODELS = {
     # 'mf': model.PureMF,
     # 'lgn': model.LightGCN,
-    'uspec': model_single.UniversalSpectralCF  # Add this line
+    'uspec': model_single.UniversalSpectralCF
 }

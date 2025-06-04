@@ -107,7 +107,6 @@ class UniversalSpectralCF(nn.Module):
     
     def _setup_combination_weights(self):
         """Setup learnable combination weights"""
-        weight_dims = {'u': 2, 'i': 2, 'ui': 3}
         init_weights = {
             'u': [0.5, 0.5],
             'i': [0.5, 0.5], 
@@ -129,8 +128,8 @@ class UniversalSpectralCF(nn.Module):
         
         return user_matrix, item_matrix
     
-    def forward(self, users, target_ratings=None):
-        """Forward pass for training/evaluation"""
+    def forward(self, users):
+        """Clean forward pass - ONLY returns predictions"""
         user_profiles = self.adj_tensor[users]
         user_filter_matrix, item_filter_matrix = self._get_filter_matrices()
         
@@ -148,14 +147,7 @@ class UniversalSpectralCF(nn.Module):
         weights = torch.softmax(self.combination_weights, dim=0)
         predicted = sum(w * score for w, score in zip(weights, scores))
         
-        if target_ratings is not None:
-            # Training: compute loss with regularization
-            mse_loss = torch.mean((predicted - target_ratings) ** 2)
-            reg_loss = sum(f.coeffs.norm(2).pow(2) for f in [self.user_filter, self.item_filter] if f is not None)
-            return mse_loss + 1e-6 * reg_loss
-        else:
-            # Evaluation: return predictions
-            return predicted
+        return predicted  # ALWAYS return predictions only!
     
     def getUsersRating(self, batch_users):
         """Evaluation interface"""
@@ -163,29 +155,7 @@ class UniversalSpectralCF(nn.Module):
         with torch.no_grad():
             if isinstance(batch_users, np.ndarray):
                 batch_users = torch.LongTensor(batch_users)
-            return self.forward(batch_users, target_ratings=None).cpu().numpy()
-
-    # def debug_filter_learning(self):
-    #     """Debug what the filters are learning"""
-    #     print("\n=== FILTER LEARNING DEBUG ===")
-    #     with torch.no_grad():
-    #         if self.filter in ['u', 'ui'] and self.user_filter is not None:
-    #             print(f"User filter coefficients: {self.user_filter.coeffs.cpu().numpy()}")
-    #         if self.filter in ['i', 'ui'] and self.item_filter is not None:
-    #             print(f"Item filter coefficients: {self.item_filter.coeffs.cpu().numpy()}")
-            
-    #         weights = torch.softmax(self.combination_weights, dim=0)
-    #         print(f"Combination weights: {weights.cpu().numpy()}")
-            
-    #         if self.filter in ['u', 'ui'] and self.user_filter is not None:
-    #             user_response = self.user_filter(self.user_eigenvals)
-    #             print(f"User filter response range: [{user_response.min():.4f}, {user_response.max():.4f}]")
-    #         if self.filter in ['i', 'ui'] and self.item_filter is not None:
-    #             item_response = self.item_filter(self.item_eigenvals)
-    #             print(f"Item filter response range: [{item_response.min():.4f}, {item_response.max():.4f}]")
-    #     print("=== END DEBUG ===\n")
-
-
+            return self.forward(batch_users).cpu().numpy()
 
     def debug_filter_learning(self):
         """Debug what the filters are learning and identify filter patterns"""

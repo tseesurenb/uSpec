@@ -11,10 +11,11 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import eigsh
 import time
+import world
 import gc
 
 class UniversalSpectralFilter(nn.Module):
-    def __init__(self, filter_order=6):
+    def __init__(self, filter_order=3):
         super().__init__()
         self.filter_order = filter_order
 
@@ -23,10 +24,6 @@ class UniversalSpectralFilter(nn.Module):
         coeffs_data = torch.zeros(filter_order + 1)
         for i, val in enumerate(smooth_lowpass[:filter_order + 1]):
             coeffs_data[i] = val
-
-        print(f"Initializing UniversalSpectralFilter with order {filter_order}")
-        print(f"  Initial coefficients: {coeffs_data.cpu().numpy()}")
-        print(f"  Coefficients shape: {coeffs_data.shape}")
         
         self.coeffs = nn.Parameter(coeffs_data)
     
@@ -51,6 +48,10 @@ class UniversalSpectralFilter(nn.Module):
         return torch.exp(-torch.abs(result)) + 1e-6
 
 class UniversalSpectralCF(nn.Module):
+    """
+    Universal Spectral CF with Positive and Negative Similarities
+    Memory-optimized with enhanced debugging
+    """
     def __init__(self, adj_mat, config=None):
         super().__init__()
         
@@ -58,7 +59,7 @@ class UniversalSpectralCF(nn.Module):
         self.config = config or {}
         self.device = self.config.get('device', 'cpu')
         self.n_eigen = self.config.get('n_eigen', 50)
-        self.filter_order = self.config.get('filter_order', 6)
+        self.filter_order = self.config.get('filter_order', 3)
         self.filter = self.config.get('filter', 'ui')
         
         # Convert and register adjacency matrix
@@ -66,14 +67,22 @@ class UniversalSpectralCF(nn.Module):
         self.register_buffer('adj_tensor', torch.tensor(adj_dense, dtype=torch.float32))
         self.n_users, self.n_items = self.adj_tensor.shape
         
-        # Compute and register normalized adjacency
+        # Compute and register normalized adjacency for positive similarities
         row_sums = self.adj_tensor.sum(dim=1, keepdim=True) + 1e-8
         col_sums = self.adj_tensor.sum(dim=0, keepdim=True) + 1e-8
         norm_adj = self.adj_tensor / torch.sqrt(row_sums) / torch.sqrt(col_sums)
         self.register_buffer('norm_adj', norm_adj)
         
+        # Create and register normalized adjacency for negative similarities
+        binary_adj = (self.adj_tensor > 0).float()
+        complement_adj = 1 - binary_adj
+        neg_row_sums = complement_adj.sum(dim=1, keepdim=True) + 1e-8
+        neg_col_sums = complement_adj.sum(dim=0, keepdim=True) + 1e-8
+        neg_norm_adj = complement_adj / torch.sqrt(neg_row_sums) / torch.sqrt(neg_col_sums)
+        self.register_buffer('neg_norm_adj', neg_norm_adj)
+        
         # Clean up intermediate variables
-        del adj_dense, row_sums, col_sums
+        del adj_dense, row_sums, col_sums, binary_adj, complement_adj, neg_row_sums, neg_col_sums
         self._memory_cleanup()
         
         # Initialize filters and weights
@@ -87,42 +96,55 @@ class UniversalSpectralCF(nn.Module):
             torch.cuda.empty_cache()
     
     def _setup_filters(self):
-        """Setup spectral filters with memory-efficient eigendecompositions"""
-        print(f"Computing eigendecompositions for filter type: {self.filter}")
+        """Setup spectral filters for positive and negative similarities"""
+        print(f"Computing positive and negative eigendecompositions for filter type: {self.filter}")
         start = time.time()
         
-        # Process filters one at a time to reduce peak memory usage
-        self.user_filter = None
-        self.item_filter = None
+        # Initialize all filters to None
+        self.user_pos_filter = None
+        self.user_neg_filter = None
+        self.item_pos_filter = None
+        self.item_neg_filter = None
         
+        # Process user filters
         if self.filter in ['u', 'ui']:
-            print("Processing user similarity...")
-            self.user_filter = self._create_filter_memory_efficient('user')
-            self._memory_cleanup()  # Clean up after user processing
+            print("Processing user positive similarity...")
+            self.user_pos_filter = self._create_filter_memory_efficient('user', 'pos')
+            self._memory_cleanup()
+            
+            print("Processing user negative similarity...")
+            self.user_neg_filter = self._create_filter_memory_efficient('user', 'neg')
+            self._memory_cleanup()
         
+        # Process item filters
         if self.filter in ['i', 'ui']:
-            print("Processing item similarity...")
-            self.item_filter = self._create_filter_memory_efficient('item')
-            self._memory_cleanup()  # Clean up after item processing
+            print("Processing item positive similarity...")
+            self.item_pos_filter = self._create_filter_memory_efficient('item', 'pos')
+            self._memory_cleanup()
+            
+            print("Processing item negative similarity...")
+            self.item_neg_filter = self._create_filter_memory_efficient('item', 'neg')
+            self._memory_cleanup()
         
         print(f'Filter setup completed in {time.time() - start:.2f}s')
     
-    def _create_filter_memory_efficient(self, filter_type):
+    def _create_filter_memory_efficient(self, filter_type, similarity_type):
         """Create filter with memory-efficient eigendecomposition"""
-        print(f"  Computing {filter_type} similarity matrix...")
+        print(f"  Computing {filter_type} {similarity_type} similarity matrix...")
+        
+        # Select appropriate normalized adjacency matrix
+        norm_adj_matrix = self.norm_adj if similarity_type == 'pos' else self.neg_norm_adj
         
         # Compute similarity matrix with memory management
-        with torch.no_grad():  # Disable gradients for initialization
+        with torch.no_grad():
             if filter_type == 'user':
-                # Compute user similarity in chunks if needed
                 similarity_matrix = self._compute_similarity_chunked(
-                    self.norm_adj, self.norm_adj.t(), chunk_size=1000
+                    norm_adj_matrix, norm_adj_matrix.t(), chunk_size=1000
                 )
                 n_components = self.n_users
             else:  # item
-                # Compute item similarity in chunks if needed  
                 similarity_matrix = self._compute_similarity_chunked(
-                    self.norm_adj.t(), self.norm_adj, chunk_size=1000
+                    norm_adj_matrix.t(), norm_adj_matrix, chunk_size=1000
                 )
                 n_components = self.n_items
         
@@ -130,7 +152,7 @@ class UniversalSpectralCF(nn.Module):
         print(f"  Converting to numpy and computing eigendecomposition...")
         sim_np = similarity_matrix.cpu().numpy()
         
-        # Clear similarity matrix from GPU memory immediately
+        # Clear similarity matrix from memory immediately
         del similarity_matrix
         self._memory_cleanup()
         
@@ -140,21 +162,27 @@ class UniversalSpectralCF(nn.Module):
             print(f"  Computing {k} eigenvalues...")
             eigenvals, eigenvecs = eigsh(sp.csr_matrix(sim_np), k=k, which='LM')
             
-            # Store eigendecomposition
-            self.register_buffer(f'{filter_type}_eigenvals', 
+            # Store eigendecomposition with descriptive names
+            buffer_name_vals = f'{filter_type}_{similarity_type}_eigenvals'
+            buffer_name_vecs = f'{filter_type}_{similarity_type}_eigenvecs'
+            
+            self.register_buffer(buffer_name_vals, 
                                torch.tensor(np.real(eigenvals), dtype=torch.float32))
-            self.register_buffer(f'{filter_type}_eigenvecs', 
+            self.register_buffer(buffer_name_vecs, 
                                torch.tensor(np.real(eigenvecs), dtype=torch.float32))
             
-            print(f"  {filter_type.capitalize()} eigendecomposition: {k} components")
+            print(f"  {filter_type.capitalize()} {similarity_type} eigendecomposition: {k} components")
             
         except Exception as e:
-            print(f"  {filter_type.capitalize()} eigendecomposition failed: {e}")
+            print(f"  {filter_type.capitalize()} {similarity_type} eigendecomposition failed: {e}")
             print(f"  Using fallback identity matrices...")
             
-            self.register_buffer(f'{filter_type}_eigenvals', 
+            buffer_name_vals = f'{filter_type}_{similarity_type}_eigenvals'
+            buffer_name_vecs = f'{filter_type}_{similarity_type}_eigenvecs'
+            
+            self.register_buffer(buffer_name_vals, 
                                torch.ones(min(self.n_eigen, n_components)))
-            self.register_buffer(f'{filter_type}_eigenvecs', 
+            self.register_buffer(buffer_name_vecs, 
                                torch.eye(n_components, min(self.n_eigen, n_components)))
         
         # Clean up numpy arrays
@@ -167,7 +195,6 @@ class UniversalSpectralCF(nn.Module):
     
     def _compute_similarity_chunked(self, A, B, chunk_size=1000):
         """Compute A @ B in chunks to save memory"""
-        # For very large matrices, compute in chunks
         if A.shape[0] <= chunk_size:
             return A @ B
         
@@ -180,50 +207,85 @@ class UniversalSpectralCF(nn.Module):
             result_chunks.append(chunk_result)
             
             # Clean up intermediate results
-            if i > 0:  # Keep some chunks in memory for efficiency
+            if i > 0:
                 torch.cuda.empty_cache() if torch.cuda.is_available() else None
         
         return torch.cat(result_chunks, dim=0)
     
     def _setup_combination_weights(self):
-        """Setup learnable combination weights"""
+        """Setup learnable combination weights for positive and negative similarities"""
         init_weights = {
-            'u': [0.5, 0.5],
-            'i': [0.5, 0.5], 
-            'ui': [0.5, 0.3, 0.2]
+            'u': [0.4, 0.3, 0.3],        # [direct, user_pos, user_neg]
+            'i': [0.4, 0.3, 0.3],        # [direct, item_pos, item_neg]
+            'ui': [0.3, 0.2, 0.2, 0.15, 0.15]  # [direct, item_pos, item_neg, user_pos, user_neg]
         }
         self.combination_weights = nn.Parameter(torch.tensor(init_weights[self.filter]))
     
     def _get_filter_matrices(self):
-        """Compute spectral filter matrices with memory management"""
-        user_matrix = item_matrix = None
+        """Compute filter matrices for both positive and negative similarities"""
+        matrices = {}
         
-        if self.user_filter is not None:
-            response = self.user_filter(self.user_eigenvals)
-            user_matrix = self.user_eigenvecs @ torch.diag(response) @ self.user_eigenvecs.t()
+        if self.filter in ['u', 'ui']:
+            if self.user_pos_filter is not None:
+                response = self.user_pos_filter(self.user_pos_eigenvals)
+                matrices['user_pos'] = self.user_pos_eigenvecs @ torch.diag(response) @ self.user_pos_eigenvecs.t()
+            
+            if self.user_neg_filter is not None:
+                response = self.user_neg_filter(self.user_neg_eigenvals)
+                matrices['user_neg'] = self.user_neg_eigenvecs @ torch.diag(response) @ self.user_neg_eigenvecs.t()
         
-        if self.item_filter is not None:
-            response = self.item_filter(self.item_eigenvals)
-            item_matrix = self.item_eigenvecs @ torch.diag(response) @ self.item_eigenvecs.t()
+        if self.filter in ['i', 'ui']:
+            if self.item_pos_filter is not None:
+                response = self.item_pos_filter(self.item_pos_eigenvals)
+                matrices['item_pos'] = self.item_pos_eigenvecs @ torch.diag(response) @ self.item_pos_eigenvecs.t()
+            
+            if self.item_neg_filter is not None:
+                response = self.item_neg_filter(self.item_neg_eigenvals)
+                matrices['item_neg'] = self.item_neg_eigenvecs @ torch.diag(response) @ self.item_neg_eigenvecs.t()
         
-        return user_matrix, item_matrix
+        return matrices
     
     def forward(self, users):
         """Clean forward pass - ONLY returns predictions"""
         user_profiles = self.adj_tensor[users]
+        filter_matrices = self._get_filter_matrices()
         
-        # Get filter matrices (these are computed on-demand)
-        user_filter_matrix, item_filter_matrix = self._get_filter_matrices()
+        # Compute filtered scores based on filter type
+        scores = [user_profiles]  # Direct scores always included
         
-        # Compute filtered scores
-        scores = [user_profiles]  # Direct scores
-        
-        if self.filter in ['i', 'ui'] and item_filter_matrix is not None:
-            scores.append(user_profiles @ item_filter_matrix)
-        
-        if self.filter in ['u', 'ui'] and user_filter_matrix is not None:
-            user_filtered = user_filter_matrix[users] @ self.adj_tensor
-            scores.append(user_filtered)
+        if self.filter == 'u':
+            # User-based filtering: direct + user_pos + user_neg
+            if 'user_pos' in filter_matrices:
+                user_pos_scores = filter_matrices['user_pos'][users] @ self.adj_tensor
+                scores.append(user_pos_scores)
+            
+            if 'user_neg' in filter_matrices:
+                user_neg_scores = filter_matrices['user_neg'][users] @ self.adj_tensor
+                scores.append(user_neg_scores)
+                
+        elif self.filter == 'i':
+            # Item-based filtering: direct + item_pos + item_neg
+            if 'item_pos' in filter_matrices:
+                scores.append(user_profiles @ filter_matrices['item_pos'])
+            
+            if 'item_neg' in filter_matrices:
+                scores.append(user_profiles @ filter_matrices['item_neg'])
+                
+        else:  # 'ui'
+            # Combined filtering: direct + item_pos + item_neg + user_pos + user_neg
+            if 'item_pos' in filter_matrices:
+                scores.append(user_profiles @ filter_matrices['item_pos'])
+            
+            if 'item_neg' in filter_matrices:
+                scores.append(user_profiles @ filter_matrices['item_neg'])
+            
+            if 'user_pos' in filter_matrices:
+                user_pos_scores = filter_matrices['user_pos'][users] @ self.adj_tensor
+                scores.append(user_pos_scores)
+            
+            if 'user_neg' in filter_matrices:
+                user_neg_scores = filter_matrices['user_neg'][users] @ self.adj_tensor
+                scores.append(user_neg_scores)
         
         # Combine scores with learned weights
         weights = torch.softmax(self.combination_weights, dim=0)
@@ -231,7 +293,7 @@ class UniversalSpectralCF(nn.Module):
         
         # Clean up intermediate matrices if they're large
         if self.training and (self.n_users > 10000 or self.n_items > 10000):
-            del user_filter_matrix, item_filter_matrix
+            del filter_matrices
             self._memory_cleanup()
         
         return predicted  # ALWAYS return predictions only!
@@ -270,8 +332,8 @@ class UniversalSpectralCF(nn.Module):
         print(f"Memory cleaned. Current usage: {self.get_memory_usage()}")
 
     def debug_filter_learning(self):
-        """Debug what the filters are learning and identify filter patterns"""
-        print("\n=== FILTER LEARNING DEBUG ===")
+        """Debug what the filters are learning with enhanced pattern recognition"""
+        print("\n=== FILTER LEARNING DEBUG (POS/NEG) ===")
         
         # Known filter patterns for comparison
         filter_patterns = {
@@ -295,10 +357,8 @@ class UniversalSpectralCF(nn.Module):
             best_similarity = -1
             
             for pattern_name, pattern_coeffs in filter_patterns.items():
-                # Compare with same number of coefficients
                 pattern_truncated = pattern_coeffs[:len(coeffs)]
                 
-                # Calculate correlation coefficient
                 if len(coeffs) > 1 and len(pattern_truncated) > 1:
                     correlation = np.corrcoef(coeffs, pattern_truncated)[0, 1]
                     if not np.isnan(correlation) and correlation > best_similarity:
@@ -329,10 +389,8 @@ class UniversalSpectralCF(nn.Module):
             if len(coeffs) < 2:
                 return "constant"
             
-            # Analyze coefficient pattern
             c0, c1 = coeffs[0], coeffs[1]
             
-            # Check for different behaviors
             if abs(c0) > 0.8 and c1 < -0.3:
                 if len(coeffs) > 2 and coeffs[2] > 0:
                     return "low-pass (strong)"
@@ -348,55 +406,74 @@ class UniversalSpectralCF(nn.Module):
                 return "custom/mixed"
         
         with torch.no_grad():
-            # Analyze user filter
-            if self.filter in ['u', 'ui'] and self.user_filter is not None:
-                user_match, user_sim, user_type = analyze_filter_pattern(
-                    self.user_filter.coeffs, "User"
-                )
-                user_response = self.user_filter(self.user_eigenvals)
-                print(f"  Filter response range: [{user_response.min():.4f}, {user_response.max():.4f}]")
+            # Analyze user filters
+            if self.filter in ['u', 'ui']:
+                if self.user_pos_filter is not None:
+                    user_pos_match, user_pos_sim, user_pos_type = analyze_filter_pattern(
+                        self.user_pos_filter.coeffs, "User Positive"
+                    )
+                    user_pos_response = self.user_pos_filter(self.user_pos_eigenvals)
+                    print(f"  Filter response range: [{user_pos_response.min():.4f}, {user_pos_response.max():.4f}]")
+                
+                if self.user_neg_filter is not None:
+                    user_neg_match, user_neg_sim, user_neg_type = analyze_filter_pattern(
+                        self.user_neg_filter.coeffs, "User Negative"
+                    )
+                    user_neg_response = self.user_neg_filter(self.user_neg_eigenvals)
+                    print(f"  Filter response range: [{user_neg_response.min():.4f}, {user_neg_response.max():.4f}]")
             
-            # Analyze item filter
-            if self.filter in ['i', 'ui'] and self.item_filter is not None:
-                item_match, item_sim, item_type = analyze_filter_pattern(
-                    self.item_filter.coeffs, "Item"
-                )
-                item_response = self.item_filter(self.item_eigenvals)
-                print(f"  Filter response range: [{item_response.min():.4f}, {item_response.max():.4f}]")
+            # Analyze item filters
+            if self.filter in ['i', 'ui']:
+                if self.item_pos_filter is not None:
+                    item_pos_match, item_pos_sim, item_pos_type = analyze_filter_pattern(
+                        self.item_pos_filter.coeffs, "Item Positive"
+                    )
+                    item_pos_response = self.item_pos_filter(self.item_pos_eigenvals)
+                    print(f"  Filter response range: [{item_pos_response.min():.4f}, {item_pos_response.max():.4f}]")
+                
+                if self.item_neg_filter is not None:
+                    item_neg_match, item_neg_sim, item_neg_type = analyze_filter_pattern(
+                        self.item_neg_filter.coeffs, "Item Negative"
+                    )
+                    item_neg_response = self.item_neg_filter(self.item_neg_eigenvals)
+                    print(f"  Filter response range: [{item_neg_response.min():.4f}, {item_neg_response.max():.4f}]")
             
             # Combination weights analysis
             weights = torch.softmax(self.combination_weights, dim=0)
             print(f"\n🔗 Combination Weights Analysis:")
             print(f"  Raw weights: {weights.cpu().numpy()}")
             
-            if self.filter == 'ui':
-                direct, item, user = weights.cpu().numpy()
-                print(f"  📈 Component Importance:")
-                print(f"     └─ Direct CF: {direct:.3f} ({'🔥 Dominant' if direct > 0.5 else '🔸 Moderate' if direct > 0.3 else '🔹 Minor'})")
-                print(f"     └─ Item filtering: {item:.3f} ({'🔥 Dominant' if item > 0.5 else '🔸 Moderate' if item > 0.3 else '🔹 Minor'})")
-                print(f"     └─ User filtering: {user:.3f} ({'🔥 Dominant' if user > 0.5 else '🔸 Moderate' if user > 0.3 else '🔹 Minor'})")
-            elif self.filter == 'u':
-                direct, user = weights.cpu().numpy()
-                print(f"     └─ Direct CF: {direct:.3f}")
-                print(f"     └─ User filtering: {user:.3f}")
-            elif self.filter == 'i':
-                direct, item = weights.cpu().numpy()
-                print(f"     └─ Direct CF: {direct:.3f}")
-                print(f"     └─ Item filtering: {item:.3f}")
+            weight_labels = {
+                'u': ['Direct CF', 'User Positive', 'User Negative'],
+                'i': ['Direct CF', 'Item Positive', 'Item Negative'],
+                'ui': ['Direct CF', 'Item Positive', 'Item Negative', 'User Positive', 'User Negative']
+            }
+            
+            labels = weight_labels[self.filter]
+            print(f"  📈 Component Importance:")
+            for i, (label, weight) in enumerate(zip(labels, weights.cpu().numpy())):
+                importance = '🔥 Dominant' if weight > 0.4 else '🔸 Moderate' if weight > 0.2 else '🔹 Minor'
+                print(f"     └─ {label}: {weight:.3f} ({importance})")
             
             # Overall model interpretation
             print(f"\n🎯 Overall Model Interpretation:")
-            if self.filter == 'ui':
-                if hasattr(locals(), 'user_match') and hasattr(locals(), 'item_match'):
-                    print(f"  └─ User-side learned: {user_type} ({user_match}-like)")
-                    print(f"  └─ Item-side learned: {item_type} ({item_match}-like)")
-                    
-                    # Suggest what this means
-                    if user_type.startswith('low-pass') and item_type.startswith('low-pass'):
-                        print(f"  🔍 Model focuses on global patterns (popular items, broad preferences)")
-                    elif 'high-pass' in user_type or 'high-pass' in item_type:
-                        print(f"  🔍 Model emphasizes niche patterns (specific preferences)")
-                    else:
-                        print(f"  🔍 Model learned balanced filtering strategy")
+            print(f"  └─ Model Type: Positive/Negative Similarity Filtering")
             
+            if self.filter == 'ui' and hasattr(locals(), 'user_pos_type'):
+                print(f"  └─ User positive learned: {user_pos_type}")
+                print(f"  └─ User negative learned: {user_neg_type}")
+                print(f"  └─ Item positive learned: {item_pos_type}")
+                print(f"  └─ Item negative learned: {item_neg_type}")
+                
+                # Advanced interpretation
+                pos_emphasis = weights[1] + weights[3]  # item_pos + user_pos
+                neg_emphasis = weights[2] + weights[4]  # item_neg + user_neg
+                
+                if pos_emphasis > neg_emphasis * 1.5:
+                    print(f"  🔍 Model emphasizes positive similarities (collaborative patterns)")
+                elif neg_emphasis > pos_emphasis * 1.5:
+                    print(f"  🔍 Model emphasizes negative similarities (diverse patterns)")
+                else:
+                    print(f"  🔍 Model balances positive and negative similarities")
+        
         print("=== END DEBUG ===\n")
