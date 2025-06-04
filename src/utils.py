@@ -1,42 +1,32 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
+Minimal utils with only essential functions
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
 
 import world
 import torch
-from torch import nn, optim
 import numpy as np
-from torch import log
-from dataloader import BasicDataset
-from time import time
-from sklearn.metrics import roc_auc_score
-import os
-
-import scipy.sparse as sp
-import pickle
-
-# =====================utils====================================
 
 def set_seed(seed):
+    """Set random seeds for reproducibility"""
     np.random.seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
     torch.manual_seed(seed)
 
-# def getFileName():
-#     if world.model_name == 'mf':
-#         file = f"mf-{world.dataset}-{world.config['latent_dim_rec']}.pth.tar"
-#     elif world.model_name == 'lgn':
-#         file = f"lgn-{world.dataset}-{world.config['lightGCN_n_layers']}-{world.config['latent_dim_rec']}.pth.tar"
-#     return os.path.join(world.FILE_PATH,file)
-
 def minibatch(*tensors, **kwargs):
-
-    batch_size = kwargs.get('batch_size', world.config['test_u_batch_size'])
+    """
+    Generic minibatch utility
+    
+    Args:
+        *tensors: Input tensors to batch
+        batch_size: Size of each batch (default: 500)
+    """
+    batch_size = kwargs.get('batch_size', 500)
 
     if len(tensors) == 1:
         tensor = tensors[0]
@@ -46,120 +36,25 @@ def minibatch(*tensors, **kwargs):
         for i in range(0, len(tensors[0]), batch_size):
             yield tuple(x[i:i + batch_size] for x in tensors)
 
-
-def shuffle(*arrays, **kwargs):
-
-    require_indices = kwargs.get('indices', False)
-
-    if len(set(len(x) for x in arrays)) != 1:
-        raise ValueError('All inputs to shuffle must have '
-                         'the same length.')
-
-    shuffle_indices = np.arange(len(arrays[0]))
-    np.random.shuffle(shuffle_indices)
-
-    if len(arrays) == 1:
-        result = arrays[0][shuffle_indices]
-    else:
-        result = tuple(x[shuffle_indices] for x in arrays)
-
-    if require_indices:
-        return result, shuffle_indices
-    else:
-        return result
-
-class timer:
-    """
-    Time context manager for code block
-        with timer():
-            do something
-        timer.get()
-    """
-    from time import time
-    TAPE = [-1]  # global time record
-    NAMED_TAPE = {}
-
-    @staticmethod
-    def get():
-        if len(timer.TAPE) > 1:
-            return timer.TAPE.pop()
-        else:
-            return -1
-
-    @staticmethod
-    def dict(select_keys=None):
-        hint = "|"
-        if select_keys is None:
-            for key, value in timer.NAMED_TAPE.items():
-                hint = hint + f"{key}:{value:.2f}|"
-        else:
-            for key in select_keys:
-                value = timer.NAMED_TAPE[key]
-                hint = hint + f"{key}:{value:.2f}|"
-        return hint
-
-    @staticmethod
-    def zero(select_keys=None):
-        if select_keys is None:
-            for key, value in timer.NAMED_TAPE.items():
-                timer.NAMED_TAPE[key] = 0
-        else:
-            for key in select_keys:
-                timer.NAMED_TAPE[key] = 0
-
-    def __init__(self, tape=None, **kwargs):
-        if kwargs.get('name'):
-            timer.NAMED_TAPE[kwargs['name']] = timer.NAMED_TAPE[
-                kwargs['name']] if timer.NAMED_TAPE.get(kwargs['name']) else 0.
-            self.named = kwargs['name']
-            if kwargs.get("group"):
-                #TODO: add group function
-                pass
-        else:
-            self.named = False
-            self.tape = tape or timer.TAPE
-
-    def __enter__(self):
-        self.start = timer.time()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.named:
-            timer.NAMED_TAPE[self.named] += timer.time() - self.start
-        else:
-            self.tape.append(timer.time() - self.start)
-
-
 # ====================Metrics==============================
-# =========================================================
 def RecallPrecision_ATk(test_data, r, k):
     """
-    test_data should be a list? cause users may have different amount of pos items. shape (test_batch, k)
-    pred_data : shape (test_batch, k) NOTE: pred_data should be pre-sorted
-    k : top-k
+    Compute Recall and Precision at k
+    test_data: list of ground truth items for each user
+    r: binary relevance matrix (users x items)
+    k: top-k
     """
     right_pred = r[:, :k].sum(1)
     precis_n = k
     recall_n = np.array([len(test_data[i]) for i in range(len(test_data))])
+    recall_n[recall_n == 0] = 1  # Avoid division by zero
     recall = np.sum(right_pred/recall_n)
     precis = np.sum(right_pred)/precis_n
     return {'recall': recall, 'precision': precis}
 
-
-def MRRatK_r(r, k):
+def NDCGatK_r(test_data, r, k):
     """
-    Mean Reciprocal Rank
-    """
-    pred_data = r[:, :k]
-    scores = np.log2(1./np.arange(1, k+1))
-    pred_data = pred_data/scores
-    pred_data = pred_data.sum(1)
-    return np.sum(pred_data)
-
-def NDCGatK_r(test_data,r,k):
-    """
-    Normalized Discounted Cumulative Gain
-    rel_i = 1 or 0, so 2^{rel_i} - 1 = 1 or 0
+    Normalized Discounted Cumulative Gain at k
     """
     assert len(r) == len(test_data)
     pred_data = r[:, :k]
@@ -177,18 +72,12 @@ def NDCGatK_r(test_data,r,k):
     ndcg[np.isnan(ndcg)] = 0.
     return np.sum(ndcg)
 
-def AUC(all_item_scores, dataset, test_data):
-    """
-        design for a single user
-    """
-    dataset : BasicDataset
-    r_all = np.zeros((dataset.m_items, ))
-    r_all[test_data] = 1
-    r = r_all[all_item_scores >= 0]
-    test_item_scores = all_item_scores[all_item_scores >= 0]
-    return roc_auc_score(r, test_item_scores)
-
 def getLabel(test_data, pred_data):
+    """
+    Convert predictions to binary relevance labels
+    test_data: list of ground truth items for each user
+    pred_data: predicted items for each user
+    """
     r = []
     for i in range(len(test_data)):
         groundTrue = test_data[i]
@@ -197,6 +86,3 @@ def getLabel(test_data, pred_data):
         pred = np.array(pred).astype("float")
         r.append(pred)
     return np.array(r).astype('float')
-
-# ====================end Metrics=============================
-# =========================================================
