@@ -12,16 +12,19 @@ import scipy.sparse as sp
 from scipy.sparse.linalg import eigsh
 import time
 import gc
+import filters as fl
 
 class UniversalSpectralFilter(nn.Module):
     def __init__(self, filter_order=6):
         super().__init__()
         self.filter_order = filter_order
 
+        
         # Initialize coefficients based on a smooth low-pass filter
-        smooth_lowpass = [1.0, -0.5, 0.1, -0.02, 0.004, -0.0008, 0.00015, -0.00003]
+        #smooth_lowpass = [1.0, -0.5, 0.1, -0.02, 0.004, -0.0008, 0.00015, -0.00003]
+        lowpass = fl.get_filter_coefficients('oscillatory_gentle', as_tensor=True) # oscillatory_gentle - 0.398638
         coeffs_data = torch.zeros(filter_order + 1)
-        for i, val in enumerate(smooth_lowpass[:filter_order + 1]):
+        for i, val in enumerate(lowpass[:filter_order + 1]):
             coeffs_data[i] = val
 
         print(f"Initializing UniversalSpectralFilter with order {filter_order}")
