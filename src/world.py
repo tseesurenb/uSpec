@@ -16,7 +16,7 @@ args = parse_args()
 ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # This will be /home/madmin/uSpec
 
 config = {}
-all_dataset = ['lastfm', 'gowalla', 'yelp2018', 'amazon-book']
+all_dataset = ['lastfm', 'gowalla', 'yelp2018', 'amazon-book', 'ml-100k']
 all_models  = ['uspec']
 
 # Aligned naming convention
