@@ -11,10 +11,10 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import eigsh
 import time
-import gc
+import world
 
 class UniversalSpectralFilter(nn.Module):
-    def __init__(self, filter_order=6):
+    def __init__(self, filter_order=3):
         super().__init__()
         self.filter_order = filter_order
 
@@ -68,121 +68,46 @@ class UniversalSpectralCF(nn.Module):
         norm_adj = self.adj_tensor / torch.sqrt(row_sums) / torch.sqrt(col_sums)
         self.register_buffer('norm_adj', norm_adj)
         
-        # Clean up intermediate variables
-        del adj_dense, row_sums, col_sums
-        self._memory_cleanup()
-        
         # Initialize filters and weights
         self._setup_filters()
         self._setup_combination_weights()
     
-    def _memory_cleanup(self):
-        """Force memory cleanup"""
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    
     def _setup_filters(self):
-        """Setup spectral filters with memory-efficient eigendecompositions"""
+        """Setup spectral filters with eigendecompositions"""
         print(f"Computing eigendecompositions for filter type: {self.filter}")
         start = time.time()
         
-        # Process filters one at a time to reduce peak memory usage
-        self.user_filter = None
-        self.item_filter = None
+        # Compute similarity matrices
+        user_sim = self.norm_adj @ self.norm_adj.t()
+        item_sim = self.norm_adj.t() @ self.norm_adj
         
-        if self.filter in ['u', 'ui']:
-            print("Processing user similarity...")
-            self.user_filter = self._create_filter_memory_efficient('user')
-            self._memory_cleanup()  # Clean up after user processing
-        
-        if self.filter in ['i', 'ui']:
-            print("Processing item similarity...")
-            self.item_filter = self._create_filter_memory_efficient('item')
-            self._memory_cleanup()  # Clean up after item processing
+        # Initialize filters
+        self.user_filter = self._create_filter('user', user_sim) if self.filter in ['u', 'ui'] else None
+        self.item_filter = self._create_filter('item', item_sim) if self.filter in ['i', 'ui'] else None
         
         print(f'Filter setup completed in {time.time() - start:.2f}s')
     
-    def _create_filter_memory_efficient(self, filter_type):
-        """Create filter with memory-efficient eigendecomposition"""
-        print(f"  Computing {filter_type} similarity matrix...")
-        
-        # Compute similarity matrix with memory management
-        with torch.no_grad():  # Disable gradients for initialization
-            if filter_type == 'user':
-                # Compute user similarity in chunks if needed
-                similarity_matrix = self._compute_similarity_chunked(
-                    self.norm_adj, self.norm_adj.t(), chunk_size=1000
-                )
-                n_components = self.n_users
-            else:  # item
-                # Compute item similarity in chunks if needed  
-                similarity_matrix = self._compute_similarity_chunked(
-                    self.norm_adj.t(), self.norm_adj, chunk_size=1000
-                )
-                n_components = self.n_items
-        
-        # Convert to numpy and compute eigendecomposition
-        print(f"  Converting to numpy and computing eigendecomposition...")
+    def _create_filter(self, filter_type, similarity_matrix):
+        """Create filter with eigendecomposition"""
         sim_np = similarity_matrix.cpu().numpy()
-        
-        # Clear similarity matrix from GPU memory immediately
-        del similarity_matrix
-        self._memory_cleanup()
-        
+        n_components = self.n_users if filter_type == 'user' else self.n_items
         k = min(self.n_eigen, n_components - 2)
         
         try:
-            print(f"  Computing {k} eigenvalues...")
             eigenvals, eigenvecs = eigsh(sp.csr_matrix(sim_np), k=k, which='LM')
-            
-            # Store eigendecomposition
-            self.register_buffer(f'{filter_type}_eigenvals', 
-                               torch.tensor(np.real(eigenvals), dtype=torch.float32))
-            self.register_buffer(f'{filter_type}_eigenvecs', 
-                               torch.tensor(np.real(eigenvecs), dtype=torch.float32))
-            
-            print(f"  {filter_type.capitalize()} eigendecomposition: {k} components")
-            
+            self.register_buffer(f'{filter_type}_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
+            self.register_buffer(f'{filter_type}_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
+            print(f"{filter_type.capitalize()} eigendecomposition: {k} components")
         except Exception as e:
-            print(f"  {filter_type.capitalize()} eigendecomposition failed: {e}")
-            print(f"  Using fallback identity matrices...")
-            
-            self.register_buffer(f'{filter_type}_eigenvals', 
-                               torch.ones(min(self.n_eigen, n_components)))
-            self.register_buffer(f'{filter_type}_eigenvecs', 
-                               torch.eye(n_components, min(self.n_eigen, n_components)))
-        
-        # Clean up numpy arrays
-        del sim_np
-        if 'eigenvals' in locals():
-            del eigenvals, eigenvecs
-        self._memory_cleanup()
+            print(f"{filter_type.capitalize()} eigendecomposition failed: {e}")
+            self.register_buffer(f'{filter_type}_eigenvals', torch.ones(min(self.n_eigen, n_components)))
+            self.register_buffer(f'{filter_type}_eigenvecs', torch.eye(n_components, min(self.n_eigen, n_components)))
         
         return UniversalSpectralFilter(self.filter_order)
     
-    def _compute_similarity_chunked(self, A, B, chunk_size=1000):
-        """Compute A @ B in chunks to save memory"""
-        # For very large matrices, compute in chunks
-        if A.shape[0] <= chunk_size:
-            return A @ B
-        
-        print(f"    Using chunked computation (chunk_size={chunk_size})...")
-        result_chunks = []
-        
-        for i in range(0, A.shape[0], chunk_size):
-            end_idx = min(i + chunk_size, A.shape[0])
-            chunk_result = A[i:end_idx] @ B
-            result_chunks.append(chunk_result)
-            
-            # Clean up intermediate results
-            if i > 0:  # Keep some chunks in memory for efficiency
-                torch.cuda.empty_cache() if torch.cuda.is_available() else None
-        
-        return torch.cat(result_chunks, dim=0)
-    
     def _setup_combination_weights(self):
         """Setup learnable combination weights"""
+        weight_dims = {'u': 2, 'i': 2, 'ui': 3}
         init_weights = {
             'u': [0.5, 0.5],
             'i': [0.5, 0.5], 
@@ -191,15 +116,12 @@ class UniversalSpectralCF(nn.Module):
         self.combination_weights = nn.Parameter(torch.tensor(init_weights[self.filter]))
     
     def _get_filter_matrices(self):
-        """Compute spectral filter matrices with memory management"""
+        """Compute spectral filter matrices"""
         user_matrix = item_matrix = None
         
         if self.user_filter is not None:
             response = self.user_filter(self.user_eigenvals)
             user_matrix = self.user_eigenvecs @ torch.diag(response) @ self.user_eigenvecs.t()
-            
-            # For very large matrices, you might want to use sparse operations
-            # or compute matrix-vector products on-the-fly instead of storing full matrix
         
         if self.item_filter is not None:
             response = self.item_filter(self.item_eigenvals)
@@ -208,30 +130,23 @@ class UniversalSpectralCF(nn.Module):
         return user_matrix, item_matrix
     
     def forward(self, users, target_ratings=None):
-        """Memory-efficient forward pass"""
+        """Forward pass for training/evaluation"""
         user_profiles = self.adj_tensor[users]
-        
-        # Get filter matrices (these are computed on-demand)
         user_filter_matrix, item_filter_matrix = self._get_filter_matrices()
         
-        # Compute filtered scores
-        scores = [user_profiles]  # Direct scores
+        # Compute filtered scores based on filter type
+        scores = [user_profiles]  # Direct scores always included
         
-        if self.filter in ['i', 'ui'] and item_filter_matrix is not None:
+        if self.filter in ['i', 'ui']:
             scores.append(user_profiles @ item_filter_matrix)
         
-        if self.filter in ['u', 'ui'] and user_filter_matrix is not None:
+        if self.filter in ['u', 'ui']:
             user_filtered = user_filter_matrix[users] @ self.adj_tensor
             scores.append(user_filtered)
         
         # Combine scores with learned weights
         weights = torch.softmax(self.combination_weights, dim=0)
         predicted = sum(w * score for w, score in zip(weights, scores))
-        
-        # Clean up intermediate matrices if they're large
-        if self.training and (self.n_users > 10000 or self.n_items > 10000):
-            del user_filter_matrix, item_filter_matrix
-            self._memory_cleanup()
         
         if target_ratings is not None:
             # Training: compute loss with regularization
@@ -243,37 +158,32 @@ class UniversalSpectralCF(nn.Module):
             return predicted
     
     def getUsersRating(self, batch_users):
-        """Memory-efficient evaluation interface"""
+        """Evaluation interface"""
         self.eval()
         with torch.no_grad():
             if isinstance(batch_users, np.ndarray):
                 batch_users = torch.LongTensor(batch_users)
+            return self.forward(batch_users, target_ratings=None).cpu().numpy()
+
+    # def debug_filter_learning(self):
+    #     """Debug what the filters are learning"""
+    #     print("\n=== FILTER LEARNING DEBUG ===")
+    #     with torch.no_grad():
+    #         if self.filter in ['u', 'ui'] and self.user_filter is not None:
+    #             print(f"User filter coefficients: {self.user_filter.coeffs.cpu().numpy()}")
+    #         if self.filter in ['i', 'ui'] and self.item_filter is not None:
+    #             print(f"Item filter coefficients: {self.item_filter.coeffs.cpu().numpy()}")
             
-            result = self.forward(batch_users, target_ratings=None).cpu().numpy()
+    #         weights = torch.softmax(self.combination_weights, dim=0)
+    #         print(f"Combination weights: {weights.cpu().numpy()}")
             
-            # Clean up GPU memory after evaluation
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            
-            return result
-    
-    def get_memory_usage(self):
-        """Get current memory usage statistics"""
-        stats = {
-            'parameters': sum(p.numel() * p.element_size() for p in self.parameters()) / 1024**2,
-            'buffers': sum(b.numel() * b.element_size() for b in self.buffers()) / 1024**2,
-        }
-        
-        if torch.cuda.is_available():
-            stats['gpu_allocated'] = torch.cuda.memory_allocated() / 1024**2
-            stats['gpu_cached'] = torch.cuda.memory_reserved() / 1024**2
-        
-        return {k: f"{v:.2f} MB" for k, v in stats.items()}
-    
-    def cleanup_memory(self):
-        """Manual memory cleanup method"""
-        self._memory_cleanup()
-        print(f"Memory cleaned. Current usage: {self.get_memory_usage()}")
+    #         if self.filter in ['u', 'ui'] and self.user_filter is not None:
+    #             user_response = self.user_filter(self.user_eigenvals)
+    #             print(f"User filter response range: [{user_response.min():.4f}, {user_response.max():.4f}]")
+    #         if self.filter in ['i', 'ui'] and self.item_filter is not None:
+    #             item_response = self.item_filter(self.item_eigenvals)
+    #             print(f"Item filter response range: [{item_response.min():.4f}, {item_response.max():.4f}]")
+    #     print("=== END DEBUG ===\n")
 
 
 
