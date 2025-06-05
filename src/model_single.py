@@ -715,7 +715,7 @@ class AdaptiveGoldenFilter(nn.Module):
         adapted_coeffs = adapted_coeffs.clone()
         adapted_coeffs[1] = -adaptive_ratio
         
-        # Apply as Chebyshev polynomial
+        # Apply as Chebyshev polynomial.
         max_eigenval = torch.max(eigenvalues) + 1e-8
         x = 2 * (eigenvalues / max_eigenval) - 1
         
