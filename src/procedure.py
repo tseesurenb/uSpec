@@ -24,12 +24,14 @@ class MSELoss:
         # Adaptive learning rates based on filter design
         filter_design = getattr(model, 'filter_design', 'original')
         
-        # Learning rate multipliers for different designs
+        # ENHANCED: Learning rate multipliers for maximum performance
         lr_multipliers = {
-            'original': 5.0,    # Needs higher LR to escape local minima
-            'basis': 1.0,       # Should be stable with normal LR
-            'adaptive': 2.0,    # Moderate boost for boundary learning
-            'neural': 1.5       # Slight boost for neural net training
+            'original': 8.0,           # Very aggressive for original to escape local minima
+            'basis': 1.5,              # Increased for better basis learning
+            'enhanced_basis': 2.0,     # Higher LR for enhanced basis performance
+            'adaptive_golden': 1.5,    # Moderate for golden adaptation
+            'adaptive': 2.0,           # Moderate boost for boundary learning
+            'neural': 1.5              # Slight boost for neural net training
         }
         
         lr_mult = lr_multipliers.get(filter_design, 1.0)
@@ -65,25 +67,41 @@ class MSELoss:
                 print(f"   Other LR: {base_lr:.5f}, WD: {weight_decay:.6f}")
             
             if len(param_groups) > 0:
-                # Use AdamW for basis and neural filters, Adam for others
-                if filter_design in ['basis', 'neural']:
+                # ENHANCED: Use optimizers optimized for performance
+                if filter_design in ['basis', 'enhanced_basis', 'neural', 'adaptive_golden']:
                     self.opt = torch.optim.AdamW(param_groups, amsgrad=True)
+                    # Add cosine annealing scheduler for better convergence
+                    total_steps = config.get('epochs', 50) * 20  # Approximate steps per epoch
+                    self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                        self.opt, T_max=total_steps, eta_min=base_lr * 0.01
+                    )
                 else:
                     self.opt = torch.optim.Adam(param_groups)
+                    self.scheduler = None
                 self.has_separate_params = True
             else:
-                if filter_design in ['basis', 'neural']:
+                if filter_design in ['basis', 'enhanced_basis', 'neural', 'adaptive_golden']:
                     self.opt = torch.optim.AdamW(model.parameters(), lr=base_lr, weight_decay=weight_decay, amsgrad=True)
+                    total_steps = config.get('epochs', 50) * 20
+                    self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                        self.opt, T_max=total_steps, eta_min=base_lr * 0.01
+                    )
                 else:
                     self.opt = torch.optim.Adam(model.parameters(), lr=base_lr, weight_decay=weight_decay)
+                    self.scheduler = None
                 self.has_separate_params = False
                 
         except AttributeError:
             print(f"   Using single optimizer for {filter_design}")
-            if filter_design in ['basis', 'neural']:
+            if filter_design in ['basis', 'enhanced_basis', 'neural', 'adaptive_golden']:
                 self.opt = torch.optim.AdamW(model.parameters(), lr=base_lr, weight_decay=weight_decay, amsgrad=True)
+                total_steps = config.get('epochs', 50) * 20
+                self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                    self.opt, T_max=total_steps, eta_min=base_lr * 0.01
+                )
             else:
                 self.opt = torch.optim.Adam(model.parameters(), lr=base_lr * lr_mult, weight_decay=weight_decay)
+                self.scheduler = None
             self.has_separate_params = False
         
         self.filter_design = filter_design
@@ -96,17 +114,33 @@ class MSELoss:
         if isinstance(predicted_ratings, np.ndarray):
             predicted_ratings = torch.from_numpy(predicted_ratings).to(world.device)
         
-        # Basic MSE loss
+        # ENHANCED: Performance-optimized loss with design-specific regularization
         loss = torch.mean((predicted_ratings - target_ratings) ** 2)
         
-        # Add design-specific regularization
-        if self.filter_design == 'basis':
-            # Encourage sparse mixing weights
+        # Add design-specific regularization for maximum performance
+        if self.filter_design in ['basis', 'enhanced_basis']:
+            # For basis filters: encourage bold mixing decisions
             if hasattr(self.model, 'user_filter') and self.model.user_filter is not None:
                 if hasattr(self.model.user_filter, 'mixing_weights'):
-                    mixing_entropy = -torch.sum(torch.softmax(self.model.user_filter.mixing_weights, dim=0) * 
-                                               torch.log_softmax(self.model.user_filter.mixing_weights, dim=0))
-                    loss += 1e-4 * mixing_entropy  # Encourage focused mixing
+                    mixing_probs = torch.softmax(self.model.user_filter.mixing_weights, dim=0)
+                    # Encourage high entropy (bold decisions) for enhanced basis
+                    if self.filter_design == 'enhanced_basis':
+                        entropy = -torch.sum(mixing_probs * torch.log(mixing_probs + 1e-8))
+                        max_entropy = torch.log(torch.tensor(len(mixing_probs), dtype=torch.float32))
+                        entropy_loss = (max_entropy - entropy) * 1e-3  # Encourage high entropy
+                        loss += entropy_loss
+                    else:
+                        # Original basis: encourage focused mixing
+                        mixing_entropy = -torch.sum(mixing_probs * torch.log(mixing_probs + 1e-8))
+                        loss += 1e-4 * mixing_entropy
+            
+        elif self.filter_design == 'adaptive_golden':
+            # For adaptive golden: encourage reasonable golden ratio variations
+            if hasattr(self.model, 'user_filter') and self.model.user_filter is not None:
+                if hasattr(self.model.user_filter, 'golden_ratio_delta'):
+                    # Regularize to stay close to optimal golden ratio range
+                    golden_reg = torch.abs(self.model.user_filter.golden_ratio_delta) * 1e-3
+                    loss += golden_reg
             
         elif self.filter_design == 'adaptive':
             # Regularize boundaries to prevent collapse
@@ -121,15 +155,22 @@ class MSELoss:
         
         loss.backward()
         
-        # Gradient clipping based on filter design
+        # ENHANCED: Adaptive gradient clipping for performance
         if self.filter_design == 'original':
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
+        elif self.filter_design in ['enhanced_basis', 'adaptive_golden']:
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=3.0)  # Moderate clipping
         elif self.filter_design == 'neural':
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=2.0)
         else:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
         
         self.opt.step()
+        
+        # ENHANCED: Update scheduler if available
+        if hasattr(self, 'scheduler') and self.scheduler is not None:
+            self.scheduler.step()
+        
         return loss.cpu().item()
 
 def create_target_ratings(dataset, users):
@@ -369,7 +410,8 @@ def train_and_evaluate(dataset, model, config):
 def run_convergence_test(dataset, config):
     """Test convergence across different initializations and designs"""
     
-    filter_designs = ['original', 'basis', 'adaptive', 'neural']
+    # ENHANCED: Include new filter designs in convergence test
+    filter_designs = ['original', 'basis', 'enhanced_basis', 'adaptive_golden', 'adaptive', 'neural']
     initializations = ['smooth', 'golden_036', 'butterworth']
     
     results = {}
@@ -409,10 +451,12 @@ def run_convergence_test(dataset, config):
         
         results[design] = design_results
     
-    # Analyze convergence
+    # ENHANCED: Analyze convergence with performance ranking
     print(f"\n{'='*80}")
-    print("📊 CONVERGENCE ANALYSIS")
+    print("📊 CONVERGENCE AND PERFORMANCE ANALYSIS")
     print(f"{'='*80}")
+    
+    design_max_performance = {}
     
     for design in filter_designs:
         ndcgs = [results[design][init]['ndcg'] for init in initializations]
@@ -420,6 +464,9 @@ def run_convergence_test(dataset, config):
         min_ndcg = min(ndcgs)
         gap = max_ndcg - min_ndcg
         std_ndcg = np.std(ndcgs)
+        mean_ndcg = np.mean(ndcgs)
+        
+        design_max_performance[design] = max_ndcg
         
         print(f"\n{design.upper()} Filter:")
         for init in initializations:
@@ -427,16 +474,43 @@ def run_convergence_test(dataset, config):
             deviation = max_ndcg - ndcg
             print(f"  {init:12}: {ndcg:.6f} (gap: {deviation:.6f})")
         
-        print(f"  Gap:      {gap:.6f}")
-        print(f"  Std Dev:  {std_ndcg:.6f}")
+        print(f"  Max NDCG:  {max_ndcg:.6f}")
+        print(f"  Mean NDCG: {mean_ndcg:.6f}")
+        print(f"  Gap:       {gap:.6f}")
+        print(f"  Std Dev:   {std_ndcg:.6f}")
         
+        # Convergence quality
         if gap < 0.01:
-            print(f"  ✅ EXCELLENT convergence")
+            convergence_status = "✅ EXCELLENT convergence"
         elif gap < 0.02:
-            print(f"  🟢 GOOD convergence")
+            convergence_status = "🟢 GOOD convergence"
         elif gap < 0.05:
-            print(f"  🟡 MODERATE convergence")
+            convergence_status = "🟡 MODERATE convergence"
         else:
-            print(f"  🔴 POOR convergence")
+            convergence_status = "🔴 POOR convergence"
+        
+        # Performance quality
+        if max_ndcg > 0.37:
+            performance_status = "🏆 EXCELLENT performance"
+        elif max_ndcg > 0.33:
+            performance_status = "🥇 GOOD performance"
+        elif max_ndcg > 0.30:
+            performance_status = "🥈 MODERATE performance"
+        else:
+            performance_status = "🥉 LOW performance"
+        
+        print(f"  {convergence_status}")
+        print(f"  {performance_status}")
+    
+    # ENHANCED: Overall ranking
+    print(f"\n{'='*80}")
+    print("🏆 OVERALL RANKING (by maximum performance)")
+    print(f"{'='*80}")
+    
+    sorted_designs = sorted(design_max_performance.items(), key=lambda x: x[1], reverse=True)
+    
+    for rank, (design, max_perf) in enumerate(sorted_designs, 1):
+        gap = max(results[design][init]['ndcg'] for init in initializations) - min(results[design][init]['ndcg'] for init in initializations)
+        print(f"{rank}. {design.upper():15} - Max: {max_perf:.6f}, Gap: {gap:.6f}")
     
     return results

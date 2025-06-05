@@ -365,18 +365,24 @@ class UniversalSpectralCF(nn.Module):
             del eigenvals, eigenvecs
         self._memory_cleanup()
         
+        # Update this section in your _create_filter_memory_efficient method:
+
         # CREATE FILTER BASED ON SELECTED DESIGN
         if self.filter_design == 'original':
             return UniversalSpectralFilter(self.filter_order, self.init_filter)
         elif self.filter_design == 'basis':
             return SpectralBasisFilter(self.filter_order, self.init_filter)
+        elif self.filter_design == 'enhanced_basis':
+            return EnhancedSpectralBasisFilter(self.filter_order, self.init_filter)
+        elif self.filter_design == 'adaptive_golden':
+            return AdaptiveGoldenFilter(self.filter_order, self.init_filter)
         elif self.filter_design == 'adaptive':
             return EigenvalueAdaptiveFilter(self.filter_order, self.init_filter)
         elif self.filter_design == 'neural':
             return NeuralSpectralFilter(self.filter_order, self.init_filter)
         else:
             raise ValueError(f"Unknown filter design: {self.filter_design}")
-    
+            
     def _compute_similarity_chunked(self, A, B, chunk_size=1000):
         """Compute A @ B in chunks to save memory"""
         if A.shape[0] <= chunk_size:
@@ -545,3 +551,182 @@ class UniversalSpectralCF(nn.Module):
         """Manual memory cleanup method"""
         self._memory_cleanup()
         print(f"Memory cleaned. Current usage: {self.get_memory_usage()}")
+
+
+# Enhanced Spectral Basis Filter - Optimized for Maximum Performance
+
+class EnhancedSpectralBasisFilter(nn.Module):
+    """Enhanced basis filter that can achieve peak performance while maintaining consistency"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        # Expanded filter bank with more proven high-performance filters
+        filter_names = [
+            'golden_036', 'soft_golden_ratio', 'golden_ratio_soft_v2', 'golden_ratio_balanced',
+            'smooth', 'butterworth', 'gaussian', 'bessel', 'conservative',
+            'fibonacci_soft', 'oscillatory_soft', 'soft_tuned_351', 'soft_tuned_352'
+        ]
+        
+        self.filter_bank = []
+        for i, name in enumerate(filter_names):
+            try:
+                coeffs = fl.get_filter_coefficients(name, order=filter_order, as_tensor=True)
+                # Pad or truncate to exact size
+                if len(coeffs) < filter_order + 1:
+                    padded_coeffs = torch.zeros(filter_order + 1)
+                    padded_coeffs[:len(coeffs)] = coeffs
+                    coeffs = padded_coeffs
+                elif len(coeffs) > filter_order + 1:
+                    coeffs = coeffs[:filter_order + 1]
+                
+                self.register_buffer(f'filter_{i}', coeffs)
+                self.filter_bank.append(getattr(self, f'filter_{i}'))
+            except:
+                # Skip filters that don't exist
+                continue
+        
+        # ENHANCED: Smarter initialization that favors high-performance filters
+        init_weights = torch.ones(len(self.filter_bank)) * 0.02  # Very low base weight
+        
+        # Give much higher initial weights to known good filters
+        golden_filters = ['golden_036', 'soft_golden_ratio', 'golden_ratio_soft_v2', 'golden_ratio_balanced']
+        for i, name in enumerate(filter_names[:len(self.filter_bank)]):
+            if name == init_filter_name:
+                init_weights[i] = 0.4  # Primary initialization gets high weight
+            elif name in golden_filters:
+                init_weights[i] = 0.15  # Golden variants get higher weight
+            elif name in ['smooth', 'butterworth']:
+                init_weights[i] = 0.08  # Known good filters get medium weight
+        
+        # Normalize to sum to 1
+        init_weights = init_weights / init_weights.sum()
+        
+        self.mixing_weights = nn.Parameter(init_weights)
+        
+        # ENHANCED: More powerful refinement
+        self.refinement_coeffs = nn.Parameter(torch.zeros(filter_order + 1))
+        self.refinement_scale = nn.Parameter(torch.tensor(0.2))  # Allow larger refinements
+        
+        # ENHANCED: Add learnable non-linear transformation
+        self.transform_scale = nn.Parameter(torch.tensor(1.0))
+        self.transform_bias = nn.Parameter(torch.tensor(0.0))
+        
+        # Store for debugging
+        self.filter_names = filter_names[:len(self.filter_bank)]
+        
+        print(f"Initializing EnhancedSpectralBasisFilter with {len(self.filter_bank)} base filters")
+        print(f"  Base filters: {self.filter_names}")
+        print(f"  Primary initialization: {init_filter_name}")
+        print(f"  Initial weights for golden filters: {[init_weights[i].item() for i, name in enumerate(self.filter_names) if 'golden' in name]}")
+        print(f"  Mode: Enhanced learnable basis combination")
+    
+    def forward(self, eigenvalues):
+        # ENHANCED: Use softmax with temperature for more flexible mixing
+        temperature = 1.0  # Could make this learnable too
+        weights = torch.softmax(self.mixing_weights / temperature, dim=0)
+        
+        # Mix the pre-defined filters
+        mixed_coeffs = torch.zeros_like(self.filter_bank[0])
+        for i, base_filter in enumerate(self.filter_bank):
+            mixed_coeffs += weights[i] * base_filter
+        
+        # ENHANCED: More sophisticated refinement
+        refinement = self.refinement_scale * torch.tanh(self.refinement_coeffs)  # Constrain refinement
+        final_coeffs = mixed_coeffs + refinement
+        
+        # Apply as Chebyshev polynomial
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        x = 2 * (eigenvalues / max_eigenval) - 1
+        
+        result = final_coeffs[0] * torch.ones_like(x)
+        if len(final_coeffs) > 1:
+            T_prev, T_curr = torch.ones_like(x), x
+            result += final_coeffs[1] * T_curr
+            
+            for i in range(2, len(final_coeffs)):
+                T_next = 2 * x * T_curr - T_prev
+                result += final_coeffs[i] * T_next
+                T_prev, T_curr = T_curr, T_next
+        
+        # ENHANCED: Learnable transformation for better expressiveness
+        result = self.transform_scale * result + self.transform_bias
+        
+        return torch.exp(-torch.abs(result).clamp(max=10.0)) + 1e-6
+    
+    def get_mixing_analysis(self):
+        """Return detailed analysis of learned mixing weights"""
+        weights = torch.softmax(self.mixing_weights, dim=0).detach().cpu().numpy()
+        analysis = {}
+        for i, name in enumerate(self.filter_names):
+            analysis[name] = weights[i]
+        
+        # Sort by weight for easy interpretation
+        sorted_analysis = dict(sorted(analysis.items(), key=lambda x: x[1], reverse=True))
+        return sorted_analysis
+
+
+# ALTERNATIVE: Adaptive Golden Filter (learns variations of golden ratio patterns)
+class AdaptiveGoldenFilter(nn.Module):
+    """Learns adaptive variations of golden ratio patterns for maximum performance"""
+    
+    def __init__(self, filter_order=6, init_filter_name='golden_036'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        # Start with golden_036 as base and learn variations
+        base_coeffs = fl.get_filter_coefficients('golden_036', as_tensor=True)
+        if len(base_coeffs) < filter_order + 1:
+            padded_coeffs = torch.zeros(filter_order + 1)
+            padded_coeffs[:len(base_coeffs)] = base_coeffs
+            base_coeffs = padded_coeffs
+        elif len(base_coeffs) > filter_order + 1:
+            base_coeffs = base_coeffs[:filter_order + 1]
+        
+        # Store base as non-trainable
+        self.register_buffer('base_coeffs', base_coeffs.clone())
+        
+        # LEARNABLE: Multiplicative and additive adaptations
+        self.scale_factors = nn.Parameter(torch.ones(filter_order + 1))
+        self.bias_terms = nn.Parameter(torch.zeros(filter_order + 1) * 0.1)
+        
+        # LEARNABLE: Golden ratio variation
+        self.golden_ratio_delta = nn.Parameter(torch.tensor(0.0))  # Learn deviation from 0.36
+        
+        print(f"Initializing AdaptiveGoldenFilter")
+        print(f"  Base: golden_036 coefficients")
+        print(f"  Mode: Learnable golden ratio variations")
+    
+    def forward(self, eigenvalues):
+        # Compute adaptive golden ratio
+        adaptive_ratio = 0.36 + 0.1 * torch.tanh(self.golden_ratio_delta)  # 0.26 to 0.46 range
+        
+        # Scale base coefficients adaptively
+        scale_constrained = 0.5 + 0.5 * torch.sigmoid(self.scale_factors)  # 0.5 to 1.0 range
+        bias_constrained = 0.1 * torch.tanh(self.bias_terms)  # -0.1 to 0.1 range
+        
+        # Compute final coefficients
+        adapted_coeffs = scale_constrained * self.base_coeffs + bias_constrained
+        
+        # Override second coefficient with learned golden ratio
+        adapted_coeffs = adapted_coeffs.clone()
+        adapted_coeffs[1] = -adaptive_ratio
+        
+        # Apply as Chebyshev polynomial
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        x = 2 * (eigenvalues / max_eigenval) - 1
+        
+        result = adapted_coeffs[0] * torch.ones_like(x)
+        if len(adapted_coeffs) > 1:
+            T_prev, T_curr = torch.ones_like(x), x
+            result += adapted_coeffs[1] * T_curr
+            
+            for i in range(2, len(adapted_coeffs)):
+                T_next = 2 * x * T_curr - T_prev
+                result += adapted_coeffs[i] * T_next
+                T_prev, T_curr = T_curr, T_next
+        
+        return torch.exp(-torch.abs(result).clamp(max=10.0)) + 1e-6

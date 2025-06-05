@@ -33,8 +33,8 @@ def parse_args():
     
     # NEW: Filter design options
     parser.add_argument('--filter_design', type=str, default='basis', 
-                       choices=['original', 'basis', 'adaptive', 'neural'],
-                       help='Filter design: original (polynomial), basis (combination), adaptive (eigenvalue-dependent), neural (MLP)')
+                       choices=['original', 'basis', 'enhanced_basis', 'adaptive_golden', 'adaptive', 'neural'],
+                       help='Filter design: original (polynomial), basis (combination), enhanced_basis (performance-optimized), adaptive_golden (golden ratio variants), adaptive (eigenvalue-dependent), neural (MLP)')
     parser.add_argument('--init_filter', type=str, default='smooth',
                        help='Initial filter pattern from filters.py (e.g., smooth, golden_036, butterworth)')
     
