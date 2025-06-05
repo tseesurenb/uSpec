@@ -1,7 +1,7 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
-Adaptive procedure for different filter designs
+Minimal and clean procedure
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -17,118 +17,20 @@ from tqdm import tqdm
 class MSELoss:
     def __init__(self, model, config):
         self.model = model
+        self.opt = torch.optim.Adam(model.parameters(), 
+                                    lr=config['lr'], 
+                                    weight_decay=config['decay'])
         
-        base_lr = config['lr']
-        weight_decay = config['decay']
-        
-        # Adaptive learning rates based on filter design
-        filter_design = getattr(model, 'filter_design', 'original')
-        
-        # Learning rate multipliers for different designs
-        lr_multipliers = {
-            'original': 5.0,    # Needs higher LR to escape local minima
-            'basis': 1.0,       # Should be stable with normal LR
-            'adaptive': 2.0,    # Moderate boost for boundary learning
-            'neural': 1.5       # Slight boost for neural net training
-        }
-        
-        lr_mult = lr_multipliers.get(filter_design, 1.0)
-        
-        try:
-            filter_params = list(model.get_filter_parameters())
-            other_params = list(model.get_other_parameters())
-            
-            print(f"🔧 {filter_design.upper()} Learning Optimizer:")
-            print(f"   Filter params: {len(filter_params)} parameters")
-            print(f"   Other params: {len(other_params)} parameters")
-            print(f"   LR multiplier: {lr_mult}x")
-            
-            param_groups = []
-            
-            if len(filter_params) > 0:
-                filter_lr = base_lr * lr_mult
-                filter_wd = weight_decay * 0.1  # Light regularization for filters
-                
-                param_groups.append({
-                    'params': filter_params,
-                    'lr': filter_lr,
-                    'weight_decay': filter_wd
-                })
-                print(f"   Filter LR: {filter_lr:.5f}, WD: {filter_wd:.6f}")
-            
-            if len(other_params) > 0:
-                param_groups.append({
-                    'params': other_params,
-                    'lr': base_lr,
-                    'weight_decay': weight_decay
-                })
-                print(f"   Other LR: {base_lr:.5f}, WD: {weight_decay:.6f}")
-            
-            if len(param_groups) > 0:
-                # Use AdamW for basis and neural filters, Adam for others
-                if filter_design in ['basis', 'neural']:
-                    self.opt = torch.optim.AdamW(param_groups, amsgrad=True)
-                else:
-                    self.opt = torch.optim.Adam(param_groups)
-                self.has_separate_params = True
-            else:
-                if filter_design in ['basis', 'neural']:
-                    self.opt = torch.optim.AdamW(model.parameters(), lr=base_lr, weight_decay=weight_decay, amsgrad=True)
-                else:
-                    self.opt = torch.optim.Adam(model.parameters(), lr=base_lr, weight_decay=weight_decay)
-                self.has_separate_params = False
-                
-        except AttributeError:
-            print(f"   Using single optimizer for {filter_design}")
-            if filter_design in ['basis', 'neural']:
-                self.opt = torch.optim.AdamW(model.parameters(), lr=base_lr, weight_decay=weight_decay, amsgrad=True)
-            else:
-                self.opt = torch.optim.Adam(model.parameters(), lr=base_lr * lr_mult, weight_decay=weight_decay)
-            self.has_separate_params = False
-        
-        self.filter_design = filter_design
-    
     def train_step(self, users, target_ratings):
-        """Adaptive training step based on filter design"""
+        """Single training step"""
         self.opt.zero_grad()
         predicted_ratings = self.model(users)
         
         if isinstance(predicted_ratings, np.ndarray):
             predicted_ratings = torch.from_numpy(predicted_ratings).to(world.device)
         
-        # Basic MSE loss
         loss = torch.mean((predicted_ratings - target_ratings) ** 2)
-        
-        # Add design-specific regularization
-        if self.filter_design == 'basis':
-            # Encourage sparse mixing weights
-            if hasattr(self.model, 'user_filter') and self.model.user_filter is not None:
-                if hasattr(self.model.user_filter, 'mixing_weights'):
-                    mixing_entropy = -torch.sum(torch.softmax(self.model.user_filter.mixing_weights, dim=0) * 
-                                               torch.log_softmax(self.model.user_filter.mixing_weights, dim=0))
-                    loss += 1e-4 * mixing_entropy  # Encourage focused mixing
-            
-        elif self.filter_design == 'adaptive':
-            # Regularize boundaries to prevent collapse
-            boundary_reg = 0.0
-            if hasattr(self.model, 'user_filter') and self.model.user_filter is not None:
-                if hasattr(self.model.user_filter, 'boundary_1'):
-                    # Encourage reasonable boundary separation
-                    b1 = torch.sigmoid(self.model.user_filter.boundary_1) * 0.5
-                    b2 = b1 + torch.sigmoid(self.model.user_filter.boundary_2) * 0.5
-                    boundary_reg += torch.relu(0.1 - (b2 - b1))  # Min separation of 0.1
-            loss += 1e-3 * boundary_reg
-        
         loss.backward()
-        
-        # Gradient clipping based on filter design
-        if self.filter_design == 'original':
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
-        elif self.filter_design == 'neural':
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=2.0)
-        else:
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-        
         self.opt.step()
         return loss.cpu().item()
 
@@ -271,8 +173,7 @@ def train_and_evaluate(dataset, model, config):
     
     # Setup
     print("="*60)
-    print(f"🚀 STARTING UNIVERSAL SPECTRAL CF TRAINING")
-    print(f"   Filter Design: {getattr(model, 'filter_design', 'original').upper()}")
+    print("🚀 STARTING UNIVERSAL SPECTRAL CF TRAINING")
     print("="*60)
     
     # Check validation availability
@@ -322,11 +223,9 @@ def train_and_evaluate(dataset, model, config):
                 no_improvement = 0
                 
                 print(f"\n✅ Epoch {epoch+1}: New best {eval_name} NDCG = {current_ndcg:.6f}")
-                print(f"   Training loss: {avg_loss:.6f}")
             else:
                 no_improvement += 1
                 print(f"\n📈 Epoch {epoch+1}: {eval_name} NDCG = {current_ndcg:.6f} (best: {best_ndcg:.6f})")
-                print(f"   Training loss: {avg_loss:.6f}")
             
             # Early stopping
             if no_improvement >= patience // eval_every:
@@ -334,8 +233,7 @@ def train_and_evaluate(dataset, model, config):
                 break
             
             # Show filter learning occasionally
-            if config.get('verbose', 1) and epoch % (eval_every * 3) == 0:
-                print(f"\n--- Filter Learning Status at Epoch {epoch+1} ---")
+            if config.get('verbose', 1) and epoch % (eval_every * 2) == 0:
                 model.debug_filter_learning()
     
     # Restore best model
@@ -360,83 +258,4 @@ def train_and_evaluate(dataset, model, config):
     print(f"   NDCG@20:      {final_results['ndcg'][0]:.6f}")
     print("="*60)
     
-    # Show final filter learning results
-    print(f"\n--- Final Filter Learning Results ---")
-    model.debug_filter_learning()
-    
     return model, final_results
-
-def run_convergence_test(dataset, config):
-    """Test convergence across different initializations and designs"""
-    
-    filter_designs = ['original', 'basis', 'adaptive', 'neural']
-    initializations = ['smooth', 'golden_036', 'butterworth']
-    
-    results = {}
-    
-    print(f"\n{'='*80}")
-    print("🧪 COMPREHENSIVE CONVERGENCE TEST")
-    print(f"{'='*80}")
-    
-    for design in filter_designs:
-        print(f"\n🔧 Testing Filter Design: {design.upper()}")
-        print(f"-" * 40)
-        
-        design_results = {}
-        
-        for init in initializations:
-            print(f"\n   🎯 Initialization: {init}")
-            
-            # Create fresh model
-            config_copy = config.copy()
-            config_copy['filter_design'] = design
-            config_copy['init_filter'] = init
-            
-            from model_single import UniversalSpectralCF
-            adj_mat = dataset.UserItemNet.tolil()
-            model = UniversalSpectralCF(adj_mat, config_copy)
-            
-            # Train model
-            trained_model, final_results = train_and_evaluate(dataset, model, config_copy)
-            
-            design_results[init] = {
-                'ndcg': final_results['ndcg'][0],
-                'recall': final_results['recall'][0],
-                'precision': final_results['precision'][0]
-            }
-            
-            print(f"      Result: NDCG = {final_results['ndcg'][0]:.6f}")
-        
-        results[design] = design_results
-    
-    # Analyze convergence
-    print(f"\n{'='*80}")
-    print("📊 CONVERGENCE ANALYSIS")
-    print(f"{'='*80}")
-    
-    for design in filter_designs:
-        ndcgs = [results[design][init]['ndcg'] for init in initializations]
-        max_ndcg = max(ndcgs)
-        min_ndcg = min(ndcgs)
-        gap = max_ndcg - min_ndcg
-        std_ndcg = np.std(ndcgs)
-        
-        print(f"\n{design.upper()} Filter:")
-        for init in initializations:
-            ndcg = results[design][init]['ndcg']
-            deviation = max_ndcg - ndcg
-            print(f"  {init:12}: {ndcg:.6f} (gap: {deviation:.6f})")
-        
-        print(f"  Gap:      {gap:.6f}")
-        print(f"  Std Dev:  {std_ndcg:.6f}")
-        
-        if gap < 0.01:
-            print(f"  ✅ EXCELLENT convergence")
-        elif gap < 0.02:
-            print(f"  🟢 GOOD convergence")
-        elif gap < 0.05:
-            print(f"  🟡 MODERATE convergence")
-        else:
-            print(f"  🔴 POOR convergence")
-    
-    return results

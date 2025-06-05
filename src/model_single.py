@@ -1,6 +1,7 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
+MULTIPLE FILTER DESIGNS: Original, Basis, Adaptive, Neural
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -14,45 +15,244 @@ import time
 import gc
 import filters as fl
 
+# =============================================================================
+# FILTER DESIGN 1: ORIGINAL UNIVERSAL FILTER (Enhanced)
+# =============================================================================
 class UniversalSpectralFilter(nn.Module):
-    def __init__(self, filter_order=6):
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
         super().__init__()
         self.filter_order = filter_order
-
+        self.init_filter_name = init_filter_name
         
-        # Initialize coefficients based on a smooth low-pass filter
-        #smooth_lowpass = [1.0, -0.5, 0.1, -0.02, 0.004, -0.0008, 0.00015, -0.00003]
-        lowpass = fl.get_filter_coefficients('oscillatory_gentle', as_tensor=True) # oscillatory_gentle - 0.398638
+        # Initialize with specified filter from filters.py
+        lowpass = fl.get_filter_coefficients(init_filter_name, as_tensor=True)
         coeffs_data = torch.zeros(filter_order + 1)
         for i, val in enumerate(lowpass[:filter_order + 1]):
             coeffs_data[i] = val
 
         print(f"Initializing UniversalSpectralFilter with order {filter_order}")
+        print(f"  Initial filter: {init_filter_name}")
         print(f"  Initial coefficients: {coeffs_data.cpu().numpy()}")
-        print(f"  Coefficients shape: {coeffs_data.shape}")
         
-        self.coeffs = nn.Parameter(coeffs_data)
+        # Store initial coefficients for comparison
+        self.register_buffer('init_coeffs', coeffs_data.clone())
+        
+        # Direct learning with proper initialization
+        self.coeffs = nn.Parameter(coeffs_data.clone())
+        
+        print(f"  Mode: Enhanced direct coefficient learning")
     
     def forward(self, eigenvalues):
         """Apply learnable spectral filter using Chebyshev polynomials"""
+        coeffs = self.coeffs
+        
         # Normalize eigenvalues to [-1, 1]
         max_eigenval = torch.max(eigenvalues) + 1e-8
         x = 2 * (eigenvalues / max_eigenval) - 1
         
         # Compute Chebyshev polynomial response
-        result = self.coeffs[0] * torch.ones_like(x)
+        result = coeffs[0] * torch.ones_like(x)
         
-        if len(self.coeffs) > 1:
+        if len(coeffs) > 1:
             T_prev, T_curr = torch.ones_like(x), x
-            result += self.coeffs[1] * T_curr
+            result += coeffs[1] * T_curr
             
-            for i in range(2, len(self.coeffs)):
+            for i in range(2, len(coeffs)):
                 T_next = 2 * x * T_curr - T_prev
-                result += self.coeffs[i] * T_next
+                result += coeffs[i] * T_next
                 T_prev, T_curr = T_curr, T_next
         
-        return torch.exp(-torch.abs(result)) + 1e-6
+        # Exponential activation for spectral filtering
+        filter_response = torch.exp(-torch.abs(result).clamp(max=10.0)) + 1e-6
+        
+        return filter_response
 
+# =============================================================================
+# FILTER DESIGN 2: SPECTRAL BASIS FILTER (Recommended)
+# =============================================================================
+class SpectralBasisFilter(nn.Module):
+    """Use learnable combination of known good filter patterns"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        # Pre-define several good filter patterns from filters.py
+        filter_names = ['golden_036', 'smooth', 'butterworth', 'gaussian', 'bessel', 'conservative']
+        
+        self.filter_bank = []
+        for i, name in enumerate(filter_names):
+            coeffs = fl.get_filter_coefficients(name, order=filter_order, as_tensor=True)
+            # Pad or truncate to exact size
+            if len(coeffs) < filter_order + 1:
+                padded_coeffs = torch.zeros(filter_order + 1)
+                padded_coeffs[:len(coeffs)] = coeffs
+                coeffs = padded_coeffs
+            elif len(coeffs) > filter_order + 1:
+                coeffs = coeffs[:filter_order + 1]
+            
+            self.register_buffer(f'filter_{i}', coeffs)
+            self.filter_bank.append(getattr(self, f'filter_{i}'))
+        
+        # Learnable mixing weights - initialize based on init_filter_name
+        init_weights = torch.ones(len(filter_names)) * 0.1
+        if init_filter_name in filter_names:
+            init_idx = filter_names.index(init_filter_name)
+            init_weights[init_idx] = 0.5
+        
+        self.mixing_weights = nn.Parameter(init_weights)
+        
+        # Learnable refinement on top of the mixture
+        self.refinement_coeffs = nn.Parameter(torch.zeros(filter_order + 1))
+        self.refinement_scale = nn.Parameter(torch.tensor(0.1))  # Small refinements
+        
+        # Store for debugging
+        self.filter_names = filter_names
+        
+        print(f"Initializing SpectralBasisFilter with {len(filter_names)} base filters")
+        print(f"  Base filters: {filter_names}")
+        print(f"  Primary initialization: {init_filter_name}")
+        print(f"  Mode: Learnable basis combination + refinement")
+    
+    def forward(self, eigenvalues):
+        # Mix the pre-defined filters
+        weights = torch.softmax(self.mixing_weights, dim=0)
+        
+        mixed_coeffs = torch.zeros_like(self.filter_bank[0])
+        for i, base_filter in enumerate(self.filter_bank):
+            mixed_coeffs += weights[i] * base_filter
+        
+        # Add learnable refinement
+        final_coeffs = mixed_coeffs + self.refinement_scale * self.refinement_coeffs
+        
+        # Apply as Chebyshev polynomial (like original)
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        x = 2 * (eigenvalues / max_eigenval) - 1
+        
+        result = final_coeffs[0] * torch.ones_like(x)
+        if len(final_coeffs) > 1:
+            T_prev, T_curr = torch.ones_like(x), x
+            result += final_coeffs[1] * T_curr
+            
+            for i in range(2, len(final_coeffs)):
+                T_next = 2 * x * T_curr - T_prev
+                result += final_coeffs[i] * T_next
+                T_prev, T_curr = T_curr, T_next
+        
+        return torch.exp(-torch.abs(result).clamp(max=10.0)) + 1e-6
+    
+    def get_mixing_analysis(self):
+        """Return analysis of learned mixing weights"""
+        weights = torch.softmax(self.mixing_weights, dim=0).detach().cpu().numpy()
+        analysis = {}
+        for i, name in enumerate(self.filter_names):
+            analysis[name] = weights[i]
+        return analysis
+
+# =============================================================================
+# FILTER DESIGN 3: EIGENVALUE ADAPTIVE FILTER
+# =============================================================================
+class EigenvalueAdaptiveFilter(nn.Module):
+    """Filter that adapts behavior based on eigenvalue magnitude"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        # Initialize from a base filter and derive adaptive parameters
+        base_coeffs = fl.get_filter_coefficients(init_filter_name, as_tensor=True)
+        if len(base_coeffs) < 3:
+            base_coeffs = torch.cat([base_coeffs, torch.zeros(3 - len(base_coeffs))])
+        
+        # Parameters for different eigenvalue ranges
+        self.low_freq_coeffs = nn.Parameter(base_coeffs[:3].clone())    # For λ ∈ [0, boundary_1]
+        self.mid_freq_coeffs = nn.Parameter(base_coeffs[:3].clone())    # For λ ∈ [boundary_1, boundary_2]  
+        self.high_freq_coeffs = nn.Parameter(base_coeffs[:3].clone())   # For λ ∈ [boundary_2, 1.0]
+        
+        # Learnable transition boundaries
+        self.boundary_1 = nn.Parameter(torch.tensor(0.3))
+        self.boundary_2 = nn.Parameter(torch.tensor(0.7))
+        
+        print(f"Initializing EigenvalueAdaptiveFilter")
+        print(f"  Base filter: {init_filter_name}")
+        print(f"  Mode: Eigenvalue-adaptive filtering")
+        
+    def forward(self, eigenvalues):
+        # Normalize eigenvalues
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        norm_eigenvals = eigenvalues / max_eigenval
+        
+        # Compute responses for each frequency band
+        low_response = self._compute_response(norm_eigenvals, self.low_freq_coeffs)
+        mid_response = self._compute_response(norm_eigenvals, self.mid_freq_coeffs)
+        high_response = self._compute_response(norm_eigenvals, self.high_freq_coeffs)
+        
+        # Constrain boundaries to reasonable ranges
+        boundary_1 = torch.sigmoid(self.boundary_1) * 0.5  # [0, 0.5]
+        boundary_2 = boundary_1 + torch.sigmoid(self.boundary_2) * 0.5  # [boundary_1, boundary_1+0.5]
+        
+        # Smooth interpolation between frequency bands
+        weight_low = torch.sigmoid((boundary_1 - norm_eigenvals) * 10)
+        weight_high = torch.sigmoid((norm_eigenvals - boundary_2) * 10)
+        weight_mid = torch.clamp(1 - weight_low - weight_high, min=0.0)
+        
+        final_response = (weight_low * low_response + 
+                         weight_mid * mid_response + 
+                         weight_high * high_response)
+        
+        return torch.clamp(final_response, min=1e-6, max=1.0)
+    
+    def _compute_response(self, eigenvals, coeffs):
+        """Simple polynomial response"""
+        result = coeffs[0] + coeffs[1] * eigenvals + coeffs[2] * eigenvals**2
+        return torch.exp(-torch.abs(result).clamp(max=8.0)) + 1e-6
+
+# =============================================================================
+# FILTER DESIGN 4: NEURAL SPECTRAL FILTER
+# =============================================================================
+class NeuralSpectralFilter(nn.Module):
+    """Use a small neural network to learn the spectral response directly"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        # Small MLP to map eigenvalue -> filter response
+        self.filter_net = nn.Sequential(
+            nn.Linear(1, 16),
+            nn.ReLU(),
+            nn.Linear(16, 16), 
+            nn.ReLU(),
+            nn.Linear(16, 1),
+            nn.Sigmoid()  # Output in [0, 1]
+        )
+        
+        # Initialize to roughly match exponential decay behavior
+        with torch.no_grad():
+            # Initialize to produce reasonable spectral filter responses
+            self.filter_net[-2].weight.normal_(0, 0.1)
+            self.filter_net[-2].bias.fill_(-1.0)  # Bias toward lower values
+        
+        print(f"Initializing NeuralSpectralFilter")
+        print(f"  Base filter inspiration: {init_filter_name}")
+        print(f"  Mode: Neural network spectral response")
+        
+    def forward(self, eigenvalues):
+        # Normalize eigenvalues to [0, 1]
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        norm_eigenvals = (eigenvalues / max_eigenval).unsqueeze(-1)
+        
+        # Pass through neural network
+        filter_response = self.filter_net(norm_eigenvals).squeeze(-1)
+        
+        return filter_response + 1e-6
+
+# =============================================================================
+# MAIN MODEL CLASS WITH FILTER SELECTION
+# =============================================================================
 class UniversalSpectralCF(nn.Module):
     def __init__(self, adj_mat, config=None):
         super().__init__()
@@ -63,6 +263,13 @@ class UniversalSpectralCF(nn.Module):
         self.n_eigen = self.config.get('n_eigen', 50)
         self.filter_order = self.config.get('filter_order', 6)
         self.filter = self.config.get('filter', 'ui')
+        
+        # NEW: Filter design selection
+        self.filter_design = self.config.get('filter_design', 'basis')  # 'original', 'basis', 'adaptive', 'neural'
+        self.init_filter = self.config.get('init_filter', 'smooth')
+        
+        print(f"Filter Design: {self.filter_design}")
+        print(f"Initialization: {self.init_filter}")
         
         # Convert and register adjacency matrix
         adj_dense = adj_mat.toarray() if sp.issparse(adj_mat) else adj_mat
@@ -90,23 +297,22 @@ class UniversalSpectralCF(nn.Module):
             torch.cuda.empty_cache()
     
     def _setup_filters(self):
-        """Setup spectral filters with memory-efficient eigendecompositions"""
+        """Setup spectral filters with selected design"""
         print(f"Computing eigendecompositions for filter type: {self.filter}")
         start = time.time()
         
-        # Process filters one at a time to reduce peak memory usage
         self.user_filter = None
         self.item_filter = None
         
         if self.filter in ['u', 'ui']:
             print("Processing user similarity...")
             self.user_filter = self._create_filter_memory_efficient('user')
-            self._memory_cleanup()  # Clean up after user processing
+            self._memory_cleanup()
         
         if self.filter in ['i', 'ui']:
             print("Processing item similarity...")
             self.item_filter = self._create_filter_memory_efficient('item')
-            self._memory_cleanup()  # Clean up after item processing
+            self._memory_cleanup()
         
         print(f'Filter setup completed in {time.time() - start:.2f}s')
     
@@ -114,26 +320,21 @@ class UniversalSpectralCF(nn.Module):
         """Create filter with memory-efficient eigendecomposition"""
         print(f"  Computing {filter_type} similarity matrix...")
         
-        # Compute similarity matrix with memory management
-        with torch.no_grad():  # Disable gradients for initialization
+        with torch.no_grad():
             if filter_type == 'user':
-                # Compute user similarity in chunks if needed
                 similarity_matrix = self._compute_similarity_chunked(
                     self.norm_adj, self.norm_adj.t(), chunk_size=1000
                 )
                 n_components = self.n_users
-            else:  # item
-                # Compute item similarity in chunks if needed  
+            else:
                 similarity_matrix = self._compute_similarity_chunked(
                     self.norm_adj.t(), self.norm_adj, chunk_size=1000
                 )
                 n_components = self.n_items
         
-        # Convert to numpy and compute eigendecomposition
         print(f"  Converting to numpy and computing eigendecomposition...")
         sim_np = similarity_matrix.cpu().numpy()
         
-        # Clear similarity matrix from GPU memory immediately
         del similarity_matrix
         self._memory_cleanup()
         
@@ -143,7 +344,6 @@ class UniversalSpectralCF(nn.Module):
             print(f"  Computing {k} eigenvalues...")
             eigenvals, eigenvecs = eigsh(sp.csr_matrix(sim_np), k=k, which='LM')
             
-            # Store eigendecomposition
             self.register_buffer(f'{filter_type}_eigenvals', 
                                torch.tensor(np.real(eigenvals), dtype=torch.float32))
             self.register_buffer(f'{filter_type}_eigenvecs', 
@@ -160,17 +360,25 @@ class UniversalSpectralCF(nn.Module):
             self.register_buffer(f'{filter_type}_eigenvecs', 
                                torch.eye(n_components, min(self.n_eigen, n_components)))
         
-        # Clean up numpy arrays
         del sim_np
         if 'eigenvals' in locals():
             del eigenvals, eigenvecs
         self._memory_cleanup()
         
-        return UniversalSpectralFilter(self.filter_order)
+        # CREATE FILTER BASED ON SELECTED DESIGN
+        if self.filter_design == 'original':
+            return UniversalSpectralFilter(self.filter_order, self.init_filter)
+        elif self.filter_design == 'basis':
+            return SpectralBasisFilter(self.filter_order, self.init_filter)
+        elif self.filter_design == 'adaptive':
+            return EigenvalueAdaptiveFilter(self.filter_order, self.init_filter)
+        elif self.filter_design == 'neural':
+            return NeuralSpectralFilter(self.filter_order, self.init_filter)
+        else:
+            raise ValueError(f"Unknown filter design: {self.filter_design}")
     
     def _compute_similarity_chunked(self, A, B, chunk_size=1000):
         """Compute A @ B in chunks to save memory"""
-        # For very large matrices, compute in chunks
         if A.shape[0] <= chunk_size:
             return A @ B
         
@@ -182,8 +390,7 @@ class UniversalSpectralCF(nn.Module):
             chunk_result = A[i:end_idx] @ B
             result_chunks.append(chunk_result)
             
-            # Clean up intermediate results
-            if i > 0:  # Keep some chunks in memory for efficiency
+            if i > 0:
                 torch.cuda.empty_cache() if torch.cuda.is_available() else None
         
         return torch.cat(result_chunks, dim=0)
@@ -215,11 +422,9 @@ class UniversalSpectralCF(nn.Module):
         """Clean forward pass - ONLY returns predictions"""
         user_profiles = self.adj_tensor[users]
         
-        # Get filter matrices (these are computed on-demand)
         user_filter_matrix, item_filter_matrix = self._get_filter_matrices()
         
-        # Compute filtered scores
-        scores = [user_profiles]  # Direct scores
+        scores = [user_profiles]
         
         if self.filter in ['i', 'ui'] and item_filter_matrix is not None:
             scores.append(user_profiles @ item_filter_matrix)
@@ -228,16 +433,14 @@ class UniversalSpectralCF(nn.Module):
             user_filtered = user_filter_matrix[users] @ self.adj_tensor
             scores.append(user_filtered)
         
-        # Combine scores with learned weights
         weights = torch.softmax(self.combination_weights, dim=0)
         predicted = sum(w * score for w, score in zip(weights, scores))
         
-        # Clean up intermediate matrices if they're large
         if self.training and (self.n_users > 10000 or self.n_items > 10000):
             del user_filter_matrix, item_filter_matrix
             self._memory_cleanup()
         
-        return predicted  # ALWAYS return predictions only!
+        return predicted
     
     def getUsersRating(self, batch_users):
         """Memory-efficient evaluation interface"""
@@ -248,12 +451,83 @@ class UniversalSpectralCF(nn.Module):
             
             result = self.forward(batch_users).cpu().numpy()
             
-            # Clean up GPU memory after evaluation
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             
             return result
     
+    def get_filter_parameters(self):
+        """Get filter parameters for separate optimization"""
+        filter_params = []
+        if self.user_filter is not None:
+            filter_params.extend(self.user_filter.parameters())
+        if self.item_filter is not None:
+            filter_params.extend(self.item_filter.parameters())
+        return filter_params
+    
+    def get_other_parameters(self):
+        """Get non-filter parameters"""
+        filter_param_ids = {id(p) for p in self.get_filter_parameters()}
+        return [p for p in self.parameters() if id(p) not in filter_param_ids]
+    
+    def debug_filter_learning(self):
+        """Enhanced debug for different filter designs"""
+        print(f"\n=== FILTER LEARNING DEBUG ({self.filter_design.upper()}) ===")
+        
+        with torch.no_grad():
+            if self.filter in ['u', 'ui'] and self.user_filter is not None:
+                print(f"\n👤 User Filter ({self.filter_design}):")
+                self._debug_single_filter(self.user_filter, "User")
+            
+            if self.filter in ['i', 'ui'] and self.item_filter is not None:
+                print(f"\n🎬 Item Filter ({self.filter_design}):")
+                self._debug_single_filter(self.item_filter, "Item")
+            
+            # Combination weights
+            weights = torch.softmax(self.combination_weights, dim=0)
+            print(f"\n🔗 Combination Weights: {weights.cpu().numpy()}")
+        
+        print("=== END DEBUG ===\n")
+    
+    def _debug_single_filter(self, filter_obj, filter_name):
+        """Debug individual filter based on its type"""
+        if isinstance(filter_obj, UniversalSpectralFilter):
+            init_coeffs = filter_obj.init_coeffs.cpu().numpy()
+            current_coeffs = filter_obj.coeffs.cpu().numpy()
+            
+            print(f"  Initial filter: {filter_obj.init_filter_name}")
+            print(f"  Initial coeffs: {init_coeffs}")
+            print(f"  Current coeffs: {current_coeffs}")
+            
+            change = current_coeffs - init_coeffs
+            abs_change = np.abs(change)
+            print(f"  Absolute Δ:     {change}")
+            print(f"  Max |Δ|:        {abs_change.max():.6f}")
+            print(f"  Mean |Δ|:       {abs_change.mean():.6f}")
+            
+        elif isinstance(filter_obj, SpectralBasisFilter):
+            mixing_analysis = filter_obj.get_mixing_analysis()
+            print(f"  Base filter mixing weights:")
+            for name, weight in mixing_analysis.items():
+                print(f"    {name:12}: {weight:.4f}")
+            
+            refinement_scale = filter_obj.refinement_scale.cpu().item()
+            refinement_coeffs = filter_obj.refinement_coeffs.cpu().numpy()
+            print(f"  Refinement scale: {refinement_scale:.4f}")
+            print(f"  Refinement coeffs: {refinement_coeffs}")
+            
+        elif isinstance(filter_obj, EigenvalueAdaptiveFilter):
+            boundary_1 = torch.sigmoid(filter_obj.boundary_1).cpu().item() * 0.5
+            boundary_2 = boundary_1 + torch.sigmoid(filter_obj.boundary_2).cpu().item() * 0.5
+            print(f"  Learned boundaries: {boundary_1:.3f}, {boundary_2:.3f}")
+            print(f"  Low freq coeffs:  {filter_obj.low_freq_coeffs.cpu().numpy()}")
+            print(f"  Mid freq coeffs:  {filter_obj.mid_freq_coeffs.cpu().numpy()}")
+            print(f"  High freq coeffs: {filter_obj.high_freq_coeffs.cpu().numpy()}")
+            
+        elif isinstance(filter_obj, NeuralSpectralFilter):
+            print(f"  Neural filter - {sum(p.numel() for p in filter_obj.parameters())} parameters")
+            print(f"  Network structure: {filter_obj.filter_net}")
+
     def get_memory_usage(self):
         """Get current memory usage statistics"""
         stats = {
@@ -271,135 +545,3 @@ class UniversalSpectralCF(nn.Module):
         """Manual memory cleanup method"""
         self._memory_cleanup()
         print(f"Memory cleaned. Current usage: {self.get_memory_usage()}")
-
-    def debug_filter_learning(self):
-        """Debug what the filters are learning and identify filter patterns"""
-        print("\n=== FILTER LEARNING DEBUG ===")
-        
-        # Known filter patterns for comparison
-        filter_patterns = {
-            'butterworth': [1.0, -0.6, 0.2, -0.05, 0.01, -0.002, 0.0003, -0.00005],
-            'chebyshev': [1.0, -0.4, 0.1, -0.01, 0.001, -0.0001, 0.00001, -0.000001],
-            'smooth': [1.0, -0.5, 0.1, -0.02, 0.004, -0.0008, 0.00015, -0.00003],
-            'bessel': [1.0, -0.3, 0.06, -0.008, 0.0008, -0.00006, 0.000004, -0.0000002],
-            'gaussian': [1.0, -0.7, 0.15, -0.03, 0.005, -0.0007, 0.00008, -0.000008],
-            'conservative': [1.0, -0.2, 0.03, -0.002, 0.0001, -0.000005, 0.0000002, -0.00000001],
-            'aggressive': [1.0, -0.8, 0.3, -0.08, 0.015, -0.002, 0.0002, -0.00002]
-        }
-        
-        def analyze_filter_pattern(coeffs_tensor, filter_name):
-            """Analyze learned coefficients and find closest pattern"""
-            coeffs = coeffs_tensor.cpu().numpy()
-            print(f"\n{filter_name} Filter Analysis:")
-            print(f"  Learned coefficients: {coeffs}")
-            
-            # Find closest pattern
-            best_match = None
-            best_similarity = -1
-            
-            for pattern_name, pattern_coeffs in filter_patterns.items():
-                # Compare with same number of coefficients
-                pattern_truncated = pattern_coeffs[:len(coeffs)]
-                
-                # Calculate correlation coefficient
-                if len(coeffs) > 1 and len(pattern_truncated) > 1:
-                    correlation = np.corrcoef(coeffs, pattern_truncated)[0, 1]
-                    if not np.isnan(correlation) and correlation > best_similarity:
-                        best_similarity = correlation
-                        best_match = pattern_name
-            
-            # Determine filter characteristics
-            filter_type = classify_filter_behavior(coeffs)
-            
-            print(f"  📊 Filter Characteristics:")
-            print(f"     └─ Type: {filter_type}")
-            print(f"     └─ Closest pattern: {best_match} (similarity: {best_similarity:.3f})")
-            
-            # Pattern interpretation
-            if best_similarity > 0.9:
-                print(f"     └─ 🎯 Strong match to {best_match} filter!")
-            elif best_similarity > 0.7:
-                print(f"     └─ ✅ Good match to {best_match}-like behavior")
-            elif best_similarity > 0.5:
-                print(f"     └─ 🔄 Moderate similarity to {best_match}")
-            else:
-                print(f"     └─ 🆕 Learned unique pattern (not matching standard filters)")
-            
-            return best_match, best_similarity, filter_type
-        
-        def classify_filter_behavior(coeffs):
-            """Classify the learned filter behavior"""
-            if len(coeffs) < 2:
-                return "constant"
-            
-            # Analyze coefficient pattern
-            c0, c1 = coeffs[0], coeffs[1]
-            
-            # Check for different behaviors
-            if abs(c0) > 0.8 and c1 < -0.3:
-                if len(coeffs) > 2 and coeffs[2] > 0:
-                    return "low-pass (strong)"
-                else:
-                    return "low-pass (moderate)"
-            elif abs(c0) < 0.3 and c1 > 0.3:
-                return "high-pass"
-            elif c0 > 0.5 and abs(c1) < 0.3:
-                return "conservative low-pass"
-            elif len(coeffs) > 2 and abs(coeffs[2]) > 0.1:
-                return "band-pass/complex"
-            else:
-                return "custom/mixed"
-        
-        with torch.no_grad():
-            # Analyze user filter
-            if self.filter in ['u', 'ui'] and self.user_filter is not None:
-                user_match, user_sim, user_type = analyze_filter_pattern(
-                    self.user_filter.coeffs, "User"
-                )
-                user_response = self.user_filter(self.user_eigenvals)
-                print(f"  Filter response range: [{user_response.min():.4f}, {user_response.max():.4f}]")
-            
-            # Analyze item filter
-            if self.filter in ['i', 'ui'] and self.item_filter is not None:
-                item_match, item_sim, item_type = analyze_filter_pattern(
-                    self.item_filter.coeffs, "Item"
-                )
-                item_response = self.item_filter(self.item_eigenvals)
-                print(f"  Filter response range: [{item_response.min():.4f}, {item_response.max():.4f}]")
-            
-            # Combination weights analysis
-            weights = torch.softmax(self.combination_weights, dim=0)
-            print(f"\n🔗 Combination Weights Analysis:")
-            print(f"  Raw weights: {weights.cpu().numpy()}")
-            
-            if self.filter == 'ui':
-                direct, item, user = weights.cpu().numpy()
-                print(f"  📈 Component Importance:")
-                print(f"     └─ Direct CF: {direct:.3f} ({'🔥 Dominant' if direct > 0.5 else '🔸 Moderate' if direct > 0.3 else '🔹 Minor'})")
-                print(f"     └─ Item filtering: {item:.3f} ({'🔥 Dominant' if item > 0.5 else '🔸 Moderate' if item > 0.3 else '🔹 Minor'})")
-                print(f"     └─ User filtering: {user:.3f} ({'🔥 Dominant' if user > 0.5 else '🔸 Moderate' if user > 0.3 else '🔹 Minor'})")
-            elif self.filter == 'u':
-                direct, user = weights.cpu().numpy()
-                print(f"     └─ Direct CF: {direct:.3f}")
-                print(f"     └─ User filtering: {user:.3f}")
-            elif self.filter == 'i':
-                direct, item = weights.cpu().numpy()
-                print(f"     └─ Direct CF: {direct:.3f}")
-                print(f"     └─ Item filtering: {item:.3f}")
-            
-            # Overall model interpretation
-            print(f"\n🎯 Overall Model Interpretation:")
-            if self.filter == 'ui':
-                if hasattr(locals(), 'user_match') and hasattr(locals(), 'item_match'):
-                    print(f"  └─ User-side learned: {user_type} ({user_match}-like)")
-                    print(f"  └─ Item-side learned: {item_type} ({item_match}-like)")
-                    
-                    # Suggest what this means
-                    if user_type.startswith('low-pass') and item_type.startswith('low-pass'):
-                        print(f"  🔍 Model focuses on global patterns (popular items, broad preferences)")
-                    elif 'high-pass' in user_type or 'high-pass' in item_type:
-                        print(f"  🔍 Model emphasizes niche patterns (specific preferences)")
-                    else:
-                        print(f"  🔍 Model learned balanced filtering strategy")
-            
-        print("=== END DEBUG ===\n")

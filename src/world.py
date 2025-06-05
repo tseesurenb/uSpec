@@ -1,6 +1,7 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
+FIXED: Proper argument parsing for filter design options
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -13,15 +14,15 @@ import multiprocessing
 
 args = parse_args()
 
-ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # This will be /home/madmin/uSpec
+ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 config = {}
 all_dataset = ['lastfm', 'gowalla', 'yelp2018', 'amazon-book', 'ml-100k']
 all_models  = ['uspec']
 
-# Aligned naming convention
-config['train_u_batch_size'] = args.train_u_batch_size  # Training batch size
-config['eval_u_batch_size'] = args.eval_u_batch_size    # Evaluation batch size
+# Basic training parameters
+config['train_u_batch_size'] = args.train_u_batch_size
+config['eval_u_batch_size'] = args.eval_u_batch_size
 config['dataset'] = args.dataset
 config['lr'] = args.lr
 config['decay'] = args.decay
@@ -35,6 +36,11 @@ config['patience'] = args.patience
 config['min_delta'] = args.min_delta
 config['n_epoch_eval'] = args.n_epoch_eval
 config['m_type'] = args.m_type
+
+# FIXED: Add the new filter design options
+config['filter_design'] = args.filter_design
+config['init_filter'] = args.init_filter
+config['run_convergence_test'] = args.run_convergence_test
 
 # Backward compatibility (optional)
 config['u_batch'] = args.train_u_batch_size  # Alias for old code
@@ -51,10 +57,8 @@ if dataset not in all_dataset:
 if model_name not in all_models:
     raise NotImplementedError(f"Haven't supported {model_name} yet!, try {all_models}")
 
-
 TRAIN_epochs = args.epochs
 topks = eval(args.topks)
-
 
 def cprint(words : str):
     print(f"\033[0;30;43m{words}\033[0m")
@@ -68,6 +72,3 @@ logo = r"""
  ╚═════╝ ╚══════╝╚═╝     ╚══════╝ ╚═════╝
                                          
 """
-# font: ANSI Shadow
-# refer to http://patorjk.com/software/taag/#p=display&f=ANSI%20Shadow&t=Sampling
-# print(logo)
