@@ -1,0 +1,334 @@
+{
+  "dataset": "lastfm",
+  "results": [
+    {
+      "dataset": "lastfm",
+      "filter_design": "basis",
+      "init_filter": "enhanced_basis",
+      "ndcg": 0.192089,
+      "combination": "basis+enhanced_basis",
+      "params": "~32"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "basis",
+      "init_filter": "deep",
+      "ndcg": 0.192089,
+      "combination": "basis+deep",
+      "params": "~32"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "basis",
+      "init_filter": "multiscale",
+      "ndcg": 0.192089,
+      "combination": "basis+multiscale",
+      "params": "~32"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "basis",
+      "init_filter": "ensemble",
+      "ndcg": 0.192089,
+      "combination": "basis+ensemble",
+      "params": "~32"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "enhanced_basis",
+      "init_filter": "enhanced_basis",
+      "ndcg": 0.191536,
+      "combination": "enhanced_basis+enhanced_basis",
+      "params": "~52"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "enhanced_basis",
+      "init_filter": "deep",
+      "ndcg": 0.191536,
+      "combination": "enhanced_basis+deep",
+      "params": "~52"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "enhanced_basis",
+      "init_filter": "multiscale",
+      "ndcg": 0.191536,
+      "combination": "enhanced_basis+multiscale",
+      "params": "~52"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "enhanced_basis",
+      "init_filter": "ensemble",
+      "ndcg": 0.191536,
+      "combination": "enhanced_basis+ensemble",
+      "params": "~52"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "adaptive_golden",
+      "init_filter": "enhanced_basis",
+      "ndcg": 0.19056,
+      "combination": "adaptive_golden+enhanced_basis",
+      "params": "~28"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "adaptive_golden",
+      "init_filter": "deep",
+      "ndcg": 0.19056,
+      "combination": "adaptive_golden+deep",
+      "params": "~28"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "adaptive_golden",
+      "init_filter": "multiscale",
+      "ndcg": 0.19056,
+      "combination": "adaptive_golden+multiscale",
+      "params": "~28"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "adaptive_golden",
+      "init_filter": "ensemble",
+      "ndcg": 0.19056,
+      "combination": "adaptive_golden+ensemble",
+      "params": "~28"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "deep",
+      "init_filter": "enhanced_basis",
+      "ndcg": 0.190491,
+      "combination": "deep+enhanced_basis",
+      "params": "~1000+"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "deep",
+      "init_filter": "deep",
+      "ndcg": 0.190491,
+      "combination": "deep+deep",
+      "params": "~1000+"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "deep",
+      "init_filter": "multiscale",
+      "ndcg": 0.190491,
+      "combination": "deep+multiscale",
+      "params": "~1000+"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "deep",
+      "init_filter": "ensemble",
+      "ndcg": 0.190491,
+      "combination": "deep+ensemble",
+      "params": "~1000+"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "neural",
+      "init_filter": "enhanced_basis",
+      "ndcg": 0.189758,
+      "combination": "neural+enhanced_basis",
+      "params": "~561"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "neural",
+      "init_filter": "deep",
+      "ndcg": 0.189758,
+      "combination": "neural+deep",
+      "params": "~561"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "neural",
+      "init_filter": "multiscale",
+      "ndcg": 0.189758,
+      "combination": "neural+multiscale",
+      "params": "~561"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "neural",
+      "init_filter": "ensemble",
+      "ndcg": 0.189758,
+      "combination": "neural+ensemble",
+      "params": "~561"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "multiscale",
+      "init_filter": "enhanced_basis",
+      "ndcg": 0.18692,
+      "combination": "multiscale+enhanced_basis",
+      "params": "~500+"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "multiscale",
+      "init_filter": "deep",
+      "ndcg": 0.18692,
+      "combination": "multiscale+deep",
+      "params": "~500+"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "multiscale",
+      "init_filter": "multiscale",
+      "ndcg": 0.18692,
+      "combination": "multiscale+multiscale",
+      "params": "~500+"
+    },
+    {
+      "dataset": "lastfm",
+      "filter_design": "multiscale",
+      "init_filter": "ensemble",
+      "ndcg": 0.18692,
+      "combination": "multiscale+ensemble",
+      "params": "~500+"
+    }
+  ],
+  "design_analysis": {
+    "basis": {
+      "count": 4,
+      "best": 0.192089,
+      "mean": 0.192089,
+      "std": 0.0,
+      "min": 0.192089
+    },
+    "enhanced_basis": {
+      "count": 4,
+      "best": 0.191536,
+      "mean": 0.191536,
+      "std": 0.0,
+      "min": 0.191536
+    },
+    "adaptive_golden": {
+      "count": 4,
+      "best": 0.19056,
+      "mean": 0.19056,
+      "std": 0.0,
+      "min": 0.19056
+    },
+    "deep": {
+      "count": 4,
+      "best": 0.190491,
+      "mean": 0.190491,
+      "std": 0.0,
+      "min": 0.190491
+    },
+    "neural": {
+      "count": 4,
+      "best": 0.189758,
+      "mean": 0.189758,
+      "std": 0.0,
+      "min": 0.189758
+    },
+    "multiscale": {
+      "count": 4,
+      "best": 0.18692,
+      "mean": 0.18692,
+      "std": 0.0,
+      "min": 0.18692
+    }
+  },
+  "category_analysis": {},
+  "init_filter_categories": {
+    "Golden Ratio": [
+      "golden_034",
+      "golden_036",
+      "golden_348",
+      "golden_352",
+      "soft_golden_ratio",
+      "golden_ratio_balanced",
+      "golden_optimized_1",
+      "golden_optimized_2",
+      "golden_optimized_3"
+    ],
+    "Oscillatory/Soft": [
+      "oscillatory_soft",
+      "oscillatory_soft_v2",
+      "oscillatory_soft_v3",
+      "soft_tuned_351",
+      "soft_tuned_352",
+      "soft_tuned_353"
+    ],
+    "Low-pass (Smoothing)": [
+      "smooth",
+      "butterworth",
+      "gaussian",
+      "bessel",
+      "conservative"
+    ],
+    "Mathematical/Natural": [
+      "fibonacci_soft",
+      "euler_soft",
+      "natural_harmony"
+    ],
+    "Adaptive/Multi-band": [
+      "wiener_like",
+      "adaptive_smooth",
+      "multi_band",
+      "multi_band_balanced"
+    ],
+    "Basic/Baseline": [
+      "identity",
+      "exponential_decay"
+    ]
+  },
+  "filter_design_info": {
+    "original": {
+      "params": "~14",
+      "description": "Direct coefficient learning"
+    },
+    "basis": {
+      "params": "~32",
+      "description": "Basis filter mixing"
+    },
+    "enhanced_basis": {
+      "params": "~52",
+      "description": "Enhanced basis with transform"
+    },
+    "adaptive_golden": {
+      "params": "~28",
+      "description": "Adaptive golden ratio"
+    },
+    "adaptive": {
+      "params": "~15",
+      "description": "Eigenvalue-adaptive"
+    },
+    "neural": {
+      "params": "~561",
+      "description": "Small neural network"
+    },
+    "deep": {
+      "params": "~1000+",
+      "description": "Deep neural network"
+    },
+    "multiscale": {
+      "params": "~500+",
+      "description": "Multi-scale frequency bands"
+    },
+    "ensemble": {
+      "params": "~2000+",
+      "description": "Ensemble of filter types"
+    }
+  },
+  "summary": {
+    "total_experiments": 24,
+    "best_ndcg": 0.192089,
+    "worst_ndcg": 0.18692,
+    "mean_ndcg": 0.19022566666666668,
+    "std_ndcg": 0.0016948674096317656,
+    "best_combination": "basis+enhanced_basis",
+    "test_mode": "full",
+    "filter_mode": "high_capacity",
+    "timestamp": "2025-06-06 10:01:47"
+  }
+}

@@ -1,0 +1,4403 @@
+{
+  "results": [
+    {
+      "filter_design": "original",
+      "init_filter": "allpass_delay",
+      "ndcg": 0.392643,
+      "combination": "original+allpass_delay"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "mid_freq_enhance",
+      "ndcg": 0.392502,
+      "combination": "original+mid_freq_enhance"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "fibonacci_soft",
+      "ndcg": 0.39241,
+      "combination": "enhanced_basis+fibonacci_soft"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "oscillatory_soft",
+      "ndcg": 0.392389,
+      "combination": "enhanced_basis+oscillatory_soft"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_tuned_351",
+      "ndcg": 0.392389,
+      "combination": "enhanced_basis+soft_tuned_351"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_golden_ratio",
+      "ndcg": 0.392363,
+      "combination": "enhanced_basis+soft_golden_ratio"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_ratio_soft_v2",
+      "ndcg": 0.392363,
+      "combination": "enhanced_basis+golden_ratio_soft_v2"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_ratio_balanced",
+      "ndcg": 0.392363,
+      "combination": "enhanced_basis+golden_ratio_balanced"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "chebyshev",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+chebyshev"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "aggressive",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+aggressive"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "elliptic_lp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+elliptic_lp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "hamming_lp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+hamming_lp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "butterworth_hp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+butterworth_hp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "chebyshev_hp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+chebyshev_hp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "bessel_hp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+bessel_hp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "elliptic_hp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+elliptic_hp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "aggressive_hp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+aggressive_hp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_hp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_hp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "butterworth_bp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+butterworth_bp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "chebyshev_bp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+chebyshev_bp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "bessel_bp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+bessel_bp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gaussian_bp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gaussian_bp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "narrow_bp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+narrow_bp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "wide_bp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+wide_bp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "butterworth_bs",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+butterworth_bs"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "chebyshev_bs",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+chebyshev_bs"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "bessel_bs",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+bessel_bs"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "notch_sharp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+notch_sharp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "notch_wide",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+notch_wide"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "allpass_linear",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+allpass_linear"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "allpass_delay",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+allpass_delay"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "allpass_phase1",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+allpass_phase1"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "allpass_phase2",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+allpass_phase2"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "allpass_dispersive",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+allpass_dispersive"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "adaptive_smooth",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+adaptive_smooth"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "adaptive_sharp",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+adaptive_sharp"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "wiener_like",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+wiener_like"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "kalman_like",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+kalman_like"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "median_like",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+median_like"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "low_freq_enhance",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+low_freq_enhance"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "mid_freq_enhance",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+mid_freq_enhance"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "high_freq_enhance",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+high_freq_enhance"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "multi_band",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+multi_band"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "multi_band_v2",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+multi_band_v2"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "multi_band_v3",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+multi_band_v3"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "multi_band_aggressive",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+multi_band_aggressive"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "multi_band_gentle",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+multi_band_gentle"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "multi_band_balanced",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+multi_band_balanced"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "multi_band_wide",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+multi_band_wide"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "multi_band_narrow",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+multi_band_narrow"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "oscillatory_soft_v2",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+oscillatory_soft_v2"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "oscillatory_soft_v3",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+oscillatory_soft_v3"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "oscillatory_soft_plus",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+oscillatory_soft_plus"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "oscillatory_soft_minus",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+oscillatory_soft_minus"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_tuned_352",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_tuned_352"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_tuned_353",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_tuned_353"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_tuned_348",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_tuned_348"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_tuned_349",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_tuned_349"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_ratio_pure",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_ratio_pure"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_ratio_soft_v3",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_ratio_soft_v3"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "fibonacci_gentle",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+fibonacci_gentle"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "fibonacci_precise",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+fibonacci_precise"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "euler_soft",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+euler_soft"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "pi_ratio_soft",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+pi_ratio_soft"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "natural_harmony",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+natural_harmony"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_034",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_034"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_348",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_348"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_352",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_352"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_fibonacci_hybrid",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_fibonacci_hybrid"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_harmonic",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_harmonic"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_geometric",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_geometric"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "sacred_ratio_1",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+sacred_ratio_1"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "sacred_ratio_2",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+sacred_ratio_2"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_spiral",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_spiral"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "nautilus_pattern",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+nautilus_pattern"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "sunflower_spiral",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+sunflower_spiral"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "pine_cone_ratio",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+pine_cone_ratio"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "perfect_fifth",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+perfect_fifth"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_fourth",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_fourth"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "harmonic_series",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+harmonic_series"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_optimized_1",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_optimized_1"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_optimized_2",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_optimized_2"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_optimized_3",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+golden_optimized_3"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_structured_1",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_structured_1"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_structured_2",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_structured_2"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_structured_3",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_structured_3"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_precise_1",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_precise_1"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_precise_2",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_precise_2"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_precise_3",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_precise_3"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_precise_4",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_precise_4"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_alt_strong",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_alt_strong"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_alt_weak",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_alt_weak"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_alt_balanced",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_alt_balanced"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_long_tail",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_long_tail"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_short_tail",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_short_tail"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_extended",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_extended"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_ratio_08",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_ratio_08"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_ratio_12",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_ratio_12"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "soft_ratio_09",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+soft_ratio_09"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_linear_decay",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_linear_decay"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_sqrt_decay",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_sqrt_decay"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_exp_decay",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_exp_decay"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_cubic_decay",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_cubic_decay"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_fibonacci",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_fibonacci"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_golden",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_golden"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_sine_like",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_sine_like"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_cosine_like",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_cosine_like"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gentle_triangle",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+gentle_triangle"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "damped_oscillation_1",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+damped_oscillation_1"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "damped_oscillation_2",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+damped_oscillation_2"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "damped_oscillation_3",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+damped_oscillation_3"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "controlled_alt_soft",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+controlled_alt_soft"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "controlled_alt_medium",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+controlled_alt_medium"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "controlled_alt_fine",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+controlled_alt_fine"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "identity",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+identity"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "unity",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+unity"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "alternating",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+alternating"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "exponential_decay",
+      "ndcg": 0.392354,
+      "combination": "enhanced_basis+exponential_decay"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "conservative",
+      "ndcg": 0.392331,
+      "combination": "enhanced_basis+conservative"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "golden_036",
+      "ndcg": 0.392328,
+      "combination": "enhanced_basis+golden_036"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "gaussian",
+      "ndcg": 0.392256,
+      "combination": "enhanced_basis+gaussian"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "bessel",
+      "ndcg": 0.392223,
+      "combination": "enhanced_basis+bessel"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "smooth",
+      "ndcg": 0.392143,
+      "combination": "enhanced_basis+smooth"
+    },
+    {
+      "filter_design": "enhanced_basis",
+      "init_filter": "butterworth",
+      "ndcg": 0.392128,
+      "combination": "enhanced_basis+butterworth"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_036",
+      "ndcg": 0.392099,
+      "combination": "basis+golden_036"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "butterworth",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+butterworth"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "chebyshev",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+chebyshev"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "smooth",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+smooth"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "bessel",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+bessel"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gaussian",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gaussian"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "conservative",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+conservative"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "aggressive",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+aggressive"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "elliptic_lp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+elliptic_lp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "hamming_lp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+hamming_lp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "butterworth_hp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+butterworth_hp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "chebyshev_hp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+chebyshev_hp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "bessel_hp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+bessel_hp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "elliptic_hp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+elliptic_hp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "aggressive_hp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+aggressive_hp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_hp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_hp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "butterworth_bp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+butterworth_bp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "chebyshev_bp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+chebyshev_bp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "bessel_bp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+bessel_bp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gaussian_bp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gaussian_bp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "narrow_bp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+narrow_bp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "wide_bp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+wide_bp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "butterworth_bs",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+butterworth_bs"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "chebyshev_bs",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+chebyshev_bs"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "bessel_bs",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+bessel_bs"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "notch_sharp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+notch_sharp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "notch_wide",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+notch_wide"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "allpass_linear",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+allpass_linear"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "allpass_delay",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+allpass_delay"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "allpass_phase1",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+allpass_phase1"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "allpass_phase2",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+allpass_phase2"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "allpass_dispersive",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+allpass_dispersive"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "adaptive_smooth",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+adaptive_smooth"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "adaptive_sharp",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+adaptive_sharp"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "wiener_like",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+wiener_like"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "kalman_like",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+kalman_like"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "median_like",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+median_like"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "low_freq_enhance",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+low_freq_enhance"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "mid_freq_enhance",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+mid_freq_enhance"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "high_freq_enhance",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+high_freq_enhance"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "multi_band",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+multi_band"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "multi_band_v2",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+multi_band_v2"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "multi_band_v3",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+multi_band_v3"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "multi_band_aggressive",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+multi_band_aggressive"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "multi_band_gentle",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+multi_band_gentle"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "multi_band_balanced",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+multi_band_balanced"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "multi_band_wide",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+multi_band_wide"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "multi_band_narrow",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+multi_band_narrow"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "oscillatory_soft",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+oscillatory_soft"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "oscillatory_soft_v2",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+oscillatory_soft_v2"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "oscillatory_soft_v3",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+oscillatory_soft_v3"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "oscillatory_soft_plus",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+oscillatory_soft_plus"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "oscillatory_soft_minus",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+oscillatory_soft_minus"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_tuned_351",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_tuned_351"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_tuned_352",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_tuned_352"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_tuned_353",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_tuned_353"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_tuned_348",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_tuned_348"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_tuned_349",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_tuned_349"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_golden_ratio",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_golden_ratio"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_ratio_pure",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_ratio_pure"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_ratio_soft_v2",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_ratio_soft_v2"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_ratio_soft_v3",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_ratio_soft_v3"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_ratio_balanced",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_ratio_balanced"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "fibonacci_soft",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+fibonacci_soft"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "fibonacci_gentle",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+fibonacci_gentle"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "fibonacci_precise",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+fibonacci_precise"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "euler_soft",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+euler_soft"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "pi_ratio_soft",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+pi_ratio_soft"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "natural_harmony",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+natural_harmony"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_034",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_034"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_036",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_036"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_348",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_348"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_352",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_352"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_fibonacci_hybrid",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_fibonacci_hybrid"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_harmonic",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_harmonic"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_geometric",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_geometric"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "sacred_ratio_1",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+sacred_ratio_1"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "sacred_ratio_2",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+sacred_ratio_2"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_spiral",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_spiral"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "nautilus_pattern",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+nautilus_pattern"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "sunflower_spiral",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+sunflower_spiral"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "pine_cone_ratio",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+pine_cone_ratio"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "perfect_fifth",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+perfect_fifth"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_fourth",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_fourth"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "harmonic_series",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+harmonic_series"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_optimized_1",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_optimized_1"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_optimized_2",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_optimized_2"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "golden_optimized_3",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+golden_optimized_3"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_structured_1",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_structured_1"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_structured_2",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_structured_2"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_structured_3",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_structured_3"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_precise_1",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_precise_1"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_precise_2",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_precise_2"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_precise_3",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_precise_3"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_precise_4",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_precise_4"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_alt_strong",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_alt_strong"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_alt_weak",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_alt_weak"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_alt_balanced",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_alt_balanced"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_long_tail",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_long_tail"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_short_tail",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_short_tail"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_extended",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_extended"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_ratio_08",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_ratio_08"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_ratio_12",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_ratio_12"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "soft_ratio_09",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+soft_ratio_09"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_linear_decay",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_linear_decay"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_sqrt_decay",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_sqrt_decay"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_exp_decay",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_exp_decay"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_cubic_decay",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_cubic_decay"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_fibonacci",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_fibonacci"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_golden",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_golden"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_sine_like",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_sine_like"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_cosine_like",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_cosine_like"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "gentle_triangle",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+gentle_triangle"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "damped_oscillation_1",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+damped_oscillation_1"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "damped_oscillation_2",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+damped_oscillation_2"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "damped_oscillation_3",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+damped_oscillation_3"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "controlled_alt_soft",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+controlled_alt_soft"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "controlled_alt_medium",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+controlled_alt_medium"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "controlled_alt_fine",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+controlled_alt_fine"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "identity",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+identity"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "unity",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+unity"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "alternating",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+alternating"
+    },
+    {
+      "filter_design": "adaptive_golden",
+      "init_filter": "exponential_decay",
+      "ndcg": 0.391901,
+      "combination": "adaptive_golden+exponential_decay"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "aggressive",
+      "ndcg": 0.391664,
+      "combination": "adaptive+aggressive"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "adaptive_sharp",
+      "ndcg": 0.39155,
+      "combination": "adaptive+adaptive_sharp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "conservative",
+      "ndcg": 0.391515,
+      "combination": "basis+conservative"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "low_freq_enhance",
+      "ndcg": 0.391324,
+      "combination": "adaptive+low_freq_enhance"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "bessel",
+      "ndcg": 0.391112,
+      "combination": "basis+bessel"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "kalman_like",
+      "ndcg": 0.390928,
+      "combination": "adaptive+kalman_like"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "chebyshev",
+      "ndcg": 0.390727,
+      "combination": "basis+chebyshev"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "aggressive",
+      "ndcg": 0.390727,
+      "combination": "basis+aggressive"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "elliptic_lp",
+      "ndcg": 0.390727,
+      "combination": "basis+elliptic_lp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "hamming_lp",
+      "ndcg": 0.390727,
+      "combination": "basis+hamming_lp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "butterworth_hp",
+      "ndcg": 0.390727,
+      "combination": "basis+butterworth_hp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "chebyshev_hp",
+      "ndcg": 0.390727,
+      "combination": "basis+chebyshev_hp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "bessel_hp",
+      "ndcg": 0.390727,
+      "combination": "basis+bessel_hp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "elliptic_hp",
+      "ndcg": 0.390727,
+      "combination": "basis+elliptic_hp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "aggressive_hp",
+      "ndcg": 0.390727,
+      "combination": "basis+aggressive_hp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_hp",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_hp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "butterworth_bp",
+      "ndcg": 0.390727,
+      "combination": "basis+butterworth_bp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "chebyshev_bp",
+      "ndcg": 0.390727,
+      "combination": "basis+chebyshev_bp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "bessel_bp",
+      "ndcg": 0.390727,
+      "combination": "basis+bessel_bp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gaussian_bp",
+      "ndcg": 0.390727,
+      "combination": "basis+gaussian_bp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "narrow_bp",
+      "ndcg": 0.390727,
+      "combination": "basis+narrow_bp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "wide_bp",
+      "ndcg": 0.390727,
+      "combination": "basis+wide_bp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "butterworth_bs",
+      "ndcg": 0.390727,
+      "combination": "basis+butterworth_bs"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "chebyshev_bs",
+      "ndcg": 0.390727,
+      "combination": "basis+chebyshev_bs"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "bessel_bs",
+      "ndcg": 0.390727,
+      "combination": "basis+bessel_bs"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "notch_sharp",
+      "ndcg": 0.390727,
+      "combination": "basis+notch_sharp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "notch_wide",
+      "ndcg": 0.390727,
+      "combination": "basis+notch_wide"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "allpass_linear",
+      "ndcg": 0.390727,
+      "combination": "basis+allpass_linear"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "allpass_delay",
+      "ndcg": 0.390727,
+      "combination": "basis+allpass_delay"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "allpass_phase1",
+      "ndcg": 0.390727,
+      "combination": "basis+allpass_phase1"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "allpass_phase2",
+      "ndcg": 0.390727,
+      "combination": "basis+allpass_phase2"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "allpass_dispersive",
+      "ndcg": 0.390727,
+      "combination": "basis+allpass_dispersive"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "adaptive_smooth",
+      "ndcg": 0.390727,
+      "combination": "basis+adaptive_smooth"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "adaptive_sharp",
+      "ndcg": 0.390727,
+      "combination": "basis+adaptive_sharp"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "wiener_like",
+      "ndcg": 0.390727,
+      "combination": "basis+wiener_like"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "kalman_like",
+      "ndcg": 0.390727,
+      "combination": "basis+kalman_like"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "median_like",
+      "ndcg": 0.390727,
+      "combination": "basis+median_like"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "low_freq_enhance",
+      "ndcg": 0.390727,
+      "combination": "basis+low_freq_enhance"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "mid_freq_enhance",
+      "ndcg": 0.390727,
+      "combination": "basis+mid_freq_enhance"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "high_freq_enhance",
+      "ndcg": 0.390727,
+      "combination": "basis+high_freq_enhance"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "multi_band",
+      "ndcg": 0.390727,
+      "combination": "basis+multi_band"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "multi_band_v2",
+      "ndcg": 0.390727,
+      "combination": "basis+multi_band_v2"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "multi_band_v3",
+      "ndcg": 0.390727,
+      "combination": "basis+multi_band_v3"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "multi_band_aggressive",
+      "ndcg": 0.390727,
+      "combination": "basis+multi_band_aggressive"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "multi_band_gentle",
+      "ndcg": 0.390727,
+      "combination": "basis+multi_band_gentle"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "multi_band_balanced",
+      "ndcg": 0.390727,
+      "combination": "basis+multi_band_balanced"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "multi_band_wide",
+      "ndcg": 0.390727,
+      "combination": "basis+multi_band_wide"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "multi_band_narrow",
+      "ndcg": 0.390727,
+      "combination": "basis+multi_band_narrow"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "oscillatory_soft",
+      "ndcg": 0.390727,
+      "combination": "basis+oscillatory_soft"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "oscillatory_soft_v2",
+      "ndcg": 0.390727,
+      "combination": "basis+oscillatory_soft_v2"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "oscillatory_soft_v3",
+      "ndcg": 0.390727,
+      "combination": "basis+oscillatory_soft_v3"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "oscillatory_soft_plus",
+      "ndcg": 0.390727,
+      "combination": "basis+oscillatory_soft_plus"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "oscillatory_soft_minus",
+      "ndcg": 0.390727,
+      "combination": "basis+oscillatory_soft_minus"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_tuned_351",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_tuned_351"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_tuned_352",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_tuned_352"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_tuned_353",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_tuned_353"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_tuned_348",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_tuned_348"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_tuned_349",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_tuned_349"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_golden_ratio",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_golden_ratio"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_ratio_pure",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_ratio_pure"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_ratio_soft_v2",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_ratio_soft_v2"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_ratio_soft_v3",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_ratio_soft_v3"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_ratio_balanced",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_ratio_balanced"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "fibonacci_soft",
+      "ndcg": 0.390727,
+      "combination": "basis+fibonacci_soft"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "fibonacci_gentle",
+      "ndcg": 0.390727,
+      "combination": "basis+fibonacci_gentle"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "fibonacci_precise",
+      "ndcg": 0.390727,
+      "combination": "basis+fibonacci_precise"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "euler_soft",
+      "ndcg": 0.390727,
+      "combination": "basis+euler_soft"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "pi_ratio_soft",
+      "ndcg": 0.390727,
+      "combination": "basis+pi_ratio_soft"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "natural_harmony",
+      "ndcg": 0.390727,
+      "combination": "basis+natural_harmony"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_034",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_034"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_348",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_348"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_352",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_352"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_fibonacci_hybrid",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_fibonacci_hybrid"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_harmonic",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_harmonic"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_geometric",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_geometric"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "sacred_ratio_1",
+      "ndcg": 0.390727,
+      "combination": "basis+sacred_ratio_1"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "sacred_ratio_2",
+      "ndcg": 0.390727,
+      "combination": "basis+sacred_ratio_2"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_spiral",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_spiral"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "nautilus_pattern",
+      "ndcg": 0.390727,
+      "combination": "basis+nautilus_pattern"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "sunflower_spiral",
+      "ndcg": 0.390727,
+      "combination": "basis+sunflower_spiral"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "pine_cone_ratio",
+      "ndcg": 0.390727,
+      "combination": "basis+pine_cone_ratio"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "perfect_fifth",
+      "ndcg": 0.390727,
+      "combination": "basis+perfect_fifth"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_fourth",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_fourth"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "harmonic_series",
+      "ndcg": 0.390727,
+      "combination": "basis+harmonic_series"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_optimized_1",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_optimized_1"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_optimized_2",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_optimized_2"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "golden_optimized_3",
+      "ndcg": 0.390727,
+      "combination": "basis+golden_optimized_3"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_structured_1",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_structured_1"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_structured_2",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_structured_2"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_structured_3",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_structured_3"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_precise_1",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_precise_1"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_precise_2",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_precise_2"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_precise_3",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_precise_3"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_precise_4",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_precise_4"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_alt_strong",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_alt_strong"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_alt_weak",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_alt_weak"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_alt_balanced",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_alt_balanced"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_long_tail",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_long_tail"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_short_tail",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_short_tail"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_extended",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_extended"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_ratio_08",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_ratio_08"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_ratio_12",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_ratio_12"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "soft_ratio_09",
+      "ndcg": 0.390727,
+      "combination": "basis+soft_ratio_09"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_linear_decay",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_linear_decay"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_sqrt_decay",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_sqrt_decay"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_exp_decay",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_exp_decay"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_cubic_decay",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_cubic_decay"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_fibonacci",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_fibonacci"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_golden",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_golden"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_sine_like",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_sine_like"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_cosine_like",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_cosine_like"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gentle_triangle",
+      "ndcg": 0.390727,
+      "combination": "basis+gentle_triangle"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "damped_oscillation_1",
+      "ndcg": 0.390727,
+      "combination": "basis+damped_oscillation_1"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "damped_oscillation_2",
+      "ndcg": 0.390727,
+      "combination": "basis+damped_oscillation_2"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "damped_oscillation_3",
+      "ndcg": 0.390727,
+      "combination": "basis+damped_oscillation_3"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "controlled_alt_soft",
+      "ndcg": 0.390727,
+      "combination": "basis+controlled_alt_soft"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "controlled_alt_medium",
+      "ndcg": 0.390727,
+      "combination": "basis+controlled_alt_medium"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "controlled_alt_fine",
+      "ndcg": 0.390727,
+      "combination": "basis+controlled_alt_fine"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "identity",
+      "ndcg": 0.390727,
+      "combination": "basis+identity"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "unity",
+      "ndcg": 0.390727,
+      "combination": "basis+unity"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "alternating",
+      "ndcg": 0.390727,
+      "combination": "basis+alternating"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "exponential_decay",
+      "ndcg": 0.390727,
+      "combination": "basis+exponential_decay"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gaussian",
+      "ndcg": 0.390648,
+      "combination": "adaptive+gaussian"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "butterworth",
+      "ndcg": 0.390557,
+      "combination": "adaptive+butterworth"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "butterworth",
+      "ndcg": 0.390401,
+      "combination": "basis+butterworth"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "smooth",
+      "ndcg": 0.390357,
+      "combination": "basis+smooth"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "smooth",
+      "ndcg": 0.390352,
+      "combination": "adaptive+smooth"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_ratio_pure",
+      "ndcg": 0.390207,
+      "combination": "adaptive+golden_ratio_pure"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "elliptic_lp",
+      "ndcg": 0.390073,
+      "combination": "adaptive+elliptic_lp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "adaptive_smooth",
+      "ndcg": 0.390057,
+      "combination": "adaptive+adaptive_smooth"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_cubic_decay",
+      "ndcg": 0.389819,
+      "combination": "adaptive+gentle_cubic_decay"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "chebyshev",
+      "ndcg": 0.389789,
+      "combination": "adaptive+chebyshev"
+    },
+    {
+      "filter_design": "basis",
+      "init_filter": "gaussian",
+      "ndcg": 0.389776,
+      "combination": "basis+gaussian"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "wiener_like",
+      "ndcg": 0.38975,
+      "combination": "adaptive+wiener_like"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "multi_band_aggressive",
+      "ndcg": 0.389731,
+      "combination": "adaptive+multi_band_aggressive"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "notch_wide",
+      "ndcg": 0.389638,
+      "combination": "adaptive+notch_wide"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "hamming_lp",
+      "ndcg": 0.38961,
+      "combination": "adaptive+hamming_lp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "aggressive_hp",
+      "ndcg": 0.389559,
+      "combination": "original+aggressive_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "oscillatory_soft_minus",
+      "ndcg": 0.389532,
+      "combination": "adaptive+oscillatory_soft_minus"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "controlled_alt_medium",
+      "ndcg": 0.389528,
+      "combination": "adaptive+controlled_alt_medium"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "exponential_decay",
+      "ndcg": 0.389491,
+      "combination": "adaptive+exponential_decay"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "oscillatory_soft_plus",
+      "ndcg": 0.389476,
+      "combination": "adaptive+oscillatory_soft_plus"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "multi_band_wide",
+      "ndcg": 0.389449,
+      "combination": "adaptive+multi_band_wide"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_structured_2",
+      "ndcg": 0.389443,
+      "combination": "adaptive+soft_structured_2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_tuned_348",
+      "ndcg": 0.389439,
+      "combination": "adaptive+soft_tuned_348"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_348",
+      "ndcg": 0.389439,
+      "combination": "adaptive+golden_348"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_tuned_349",
+      "ndcg": 0.389435,
+      "combination": "adaptive+soft_tuned_349"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_tuned_352",
+      "ndcg": 0.389433,
+      "combination": "adaptive+soft_tuned_352"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_352",
+      "ndcg": 0.389433,
+      "combination": "adaptive+golden_352"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "oscillatory_soft_v2",
+      "ndcg": 0.389432,
+      "combination": "adaptive+oscillatory_soft_v2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_036",
+      "ndcg": 0.389432,
+      "combination": "adaptive+golden_036"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_tuned_353",
+      "ndcg": 0.389427,
+      "combination": "adaptive+soft_tuned_353"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_tuned_351",
+      "ndcg": 0.389425,
+      "combination": "adaptive+soft_tuned_351"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "oscillatory_soft",
+      "ndcg": 0.389419,
+      "combination": "adaptive+oscillatory_soft"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_golden_ratio",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_golden_ratio"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_ratio_soft_v2",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_ratio_soft_v2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_ratio_soft_v3",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_ratio_soft_v3"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_ratio_balanced",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_ratio_balanced"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "fibonacci_soft",
+      "ndcg": 0.389419,
+      "combination": "adaptive+fibonacci_soft"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "fibonacci_gentle",
+      "ndcg": 0.389419,
+      "combination": "adaptive+fibonacci_gentle"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "fibonacci_precise",
+      "ndcg": 0.389419,
+      "combination": "adaptive+fibonacci_precise"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "euler_soft",
+      "ndcg": 0.389419,
+      "combination": "adaptive+euler_soft"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "pi_ratio_soft",
+      "ndcg": 0.389419,
+      "combination": "adaptive+pi_ratio_soft"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "natural_harmony",
+      "ndcg": 0.389419,
+      "combination": "adaptive+natural_harmony"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_fibonacci_hybrid",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_fibonacci_hybrid"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_harmonic",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_harmonic"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_geometric",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_geometric"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "sacred_ratio_1",
+      "ndcg": 0.389419,
+      "combination": "adaptive+sacred_ratio_1"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "sacred_ratio_2",
+      "ndcg": 0.389419,
+      "combination": "adaptive+sacred_ratio_2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_spiral",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_spiral"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "nautilus_pattern",
+      "ndcg": 0.389419,
+      "combination": "adaptive+nautilus_pattern"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "sunflower_spiral",
+      "ndcg": 0.389419,
+      "combination": "adaptive+sunflower_spiral"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "pine_cone_ratio",
+      "ndcg": 0.389419,
+      "combination": "adaptive+pine_cone_ratio"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "perfect_fifth",
+      "ndcg": 0.389419,
+      "combination": "adaptive+perfect_fifth"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_fourth",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_fourth"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "harmonic_series",
+      "ndcg": 0.389419,
+      "combination": "adaptive+harmonic_series"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_optimized_1",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_optimized_1"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_optimized_2",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_optimized_2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_optimized_3",
+      "ndcg": 0.389419,
+      "combination": "adaptive+golden_optimized_3"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_precise_1",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_precise_1"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_precise_2",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_precise_2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_precise_3",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_precise_3"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_precise_4",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_precise_4"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_alt_strong",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_alt_strong"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_alt_weak",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_alt_weak"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_alt_balanced",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_alt_balanced"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_long_tail",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_long_tail"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_short_tail",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_short_tail"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_extended",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_extended"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_ratio_08",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_ratio_08"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_ratio_12",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_ratio_12"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_ratio_09",
+      "ndcg": 0.389419,
+      "combination": "adaptive+soft_ratio_09"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_structured_1",
+      "ndcg": 0.389411,
+      "combination": "adaptive+soft_structured_1"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "soft_structured_3",
+      "ndcg": 0.389403,
+      "combination": "adaptive+soft_structured_3"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "allpass_phase2",
+      "ndcg": 0.389395,
+      "combination": "adaptive+allpass_phase2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "multi_band",
+      "ndcg": 0.389395,
+      "combination": "adaptive+multi_band"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "oscillatory_soft_v3",
+      "ndcg": 0.389358,
+      "combination": "adaptive+oscillatory_soft_v3"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "golden_034",
+      "ndcg": 0.389358,
+      "combination": "adaptive+golden_034"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "damped_oscillation_1",
+      "ndcg": 0.38934,
+      "combination": "adaptive+damped_oscillation_1"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "elliptic_hp",
+      "ndcg": 0.38931,
+      "combination": "original+elliptic_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "bessel_bs",
+      "ndcg": 0.389309,
+      "combination": "adaptive+bessel_bs"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_fibonacci",
+      "ndcg": 0.389306,
+      "combination": "adaptive+gentle_fibonacci"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_golden",
+      "ndcg": 0.38929,
+      "combination": "adaptive+gentle_golden"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "damped_oscillation_2",
+      "ndcg": 0.389255,
+      "combination": "adaptive+damped_oscillation_2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_triangle",
+      "ndcg": 0.389211,
+      "combination": "adaptive+gentle_triangle"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_sine_like",
+      "ndcg": 0.389199,
+      "combination": "adaptive+gentle_sine_like"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "multi_band_v3",
+      "ndcg": 0.389195,
+      "combination": "adaptive+multi_band_v3"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "chebyshev_bs",
+      "ndcg": 0.389191,
+      "combination": "adaptive+chebyshev_bs"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "damped_oscillation_3",
+      "ndcg": 0.389172,
+      "combination": "adaptive+damped_oscillation_3"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "bessel",
+      "ndcg": 0.389157,
+      "combination": "adaptive+bessel"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_linear_decay",
+      "ndcg": 0.389157,
+      "combination": "adaptive+gentle_linear_decay"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "controlled_alt_fine",
+      "ndcg": 0.389144,
+      "combination": "adaptive+controlled_alt_fine"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "median_like",
+      "ndcg": 0.389139,
+      "combination": "adaptive+median_like"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_exp_decay",
+      "ndcg": 0.389138,
+      "combination": "adaptive+gentle_exp_decay"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "controlled_alt_soft",
+      "ndcg": 0.389108,
+      "combination": "adaptive+controlled_alt_soft"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "multi_band_balanced",
+      "ndcg": 0.3891,
+      "combination": "adaptive+multi_band_balanced"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "notch_sharp",
+      "ndcg": 0.389085,
+      "combination": "adaptive+notch_sharp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "allpass_linear",
+      "ndcg": 0.38905,
+      "combination": "adaptive+allpass_linear"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "identity",
+      "ndcg": 0.38905,
+      "combination": "adaptive+identity"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "multi_band_v2",
+      "ndcg": 0.388992,
+      "combination": "adaptive+multi_band_v2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "multi_band_gentle",
+      "ndcg": 0.388989,
+      "combination": "adaptive+multi_band_gentle"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_cosine_like",
+      "ndcg": 0.388796,
+      "combination": "adaptive+gentle_cosine_like"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "butterworth_bs",
+      "ndcg": 0.388778,
+      "combination": "adaptive+butterworth_bs"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_sqrt_decay",
+      "ndcg": 0.388644,
+      "combination": "adaptive+gentle_sqrt_decay"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "multi_band_narrow",
+      "ndcg": 0.388599,
+      "combination": "adaptive+multi_band_narrow"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "conservative",
+      "ndcg": 0.388565,
+      "combination": "adaptive+conservative"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "butterworth_hp",
+      "ndcg": 0.388457,
+      "combination": "adaptive+butterworth_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "bessel_hp",
+      "ndcg": 0.388449,
+      "combination": "adaptive+bessel_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "aggressive_hp",
+      "ndcg": 0.388444,
+      "combination": "adaptive+aggressive_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "allpass_dispersive",
+      "ndcg": 0.388415,
+      "combination": "adaptive+allpass_dispersive"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gentle_hp",
+      "ndcg": 0.388414,
+      "combination": "adaptive+gentle_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "chebyshev_hp",
+      "ndcg": 0.388407,
+      "combination": "adaptive+chebyshev_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "elliptic_hp",
+      "ndcg": 0.388404,
+      "combination": "adaptive+elliptic_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "allpass_phase1",
+      "ndcg": 0.388386,
+      "combination": "adaptive+allpass_phase1"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "butterworth",
+      "ndcg": 0.388049,
+      "combination": "neural+butterworth"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "chebyshev",
+      "ndcg": 0.388049,
+      "combination": "neural+chebyshev"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "smooth",
+      "ndcg": 0.388049,
+      "combination": "neural+smooth"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "bessel",
+      "ndcg": 0.388049,
+      "combination": "neural+bessel"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gaussian",
+      "ndcg": 0.388049,
+      "combination": "neural+gaussian"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "conservative",
+      "ndcg": 0.388049,
+      "combination": "neural+conservative"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "aggressive",
+      "ndcg": 0.388049,
+      "combination": "neural+aggressive"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "elliptic_lp",
+      "ndcg": 0.388049,
+      "combination": "neural+elliptic_lp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "hamming_lp",
+      "ndcg": 0.388049,
+      "combination": "neural+hamming_lp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "butterworth_hp",
+      "ndcg": 0.388049,
+      "combination": "neural+butterworth_hp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "chebyshev_hp",
+      "ndcg": 0.388049,
+      "combination": "neural+chebyshev_hp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "bessel_hp",
+      "ndcg": 0.388049,
+      "combination": "neural+bessel_hp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "elliptic_hp",
+      "ndcg": 0.388049,
+      "combination": "neural+elliptic_hp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "aggressive_hp",
+      "ndcg": 0.388049,
+      "combination": "neural+aggressive_hp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_hp",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_hp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "butterworth_bp",
+      "ndcg": 0.388049,
+      "combination": "neural+butterworth_bp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "chebyshev_bp",
+      "ndcg": 0.388049,
+      "combination": "neural+chebyshev_bp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "bessel_bp",
+      "ndcg": 0.388049,
+      "combination": "neural+bessel_bp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gaussian_bp",
+      "ndcg": 0.388049,
+      "combination": "neural+gaussian_bp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "narrow_bp",
+      "ndcg": 0.388049,
+      "combination": "neural+narrow_bp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "wide_bp",
+      "ndcg": 0.388049,
+      "combination": "neural+wide_bp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "butterworth_bs",
+      "ndcg": 0.388049,
+      "combination": "neural+butterworth_bs"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "chebyshev_bs",
+      "ndcg": 0.388049,
+      "combination": "neural+chebyshev_bs"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "bessel_bs",
+      "ndcg": 0.388049,
+      "combination": "neural+bessel_bs"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "notch_sharp",
+      "ndcg": 0.388049,
+      "combination": "neural+notch_sharp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "notch_wide",
+      "ndcg": 0.388049,
+      "combination": "neural+notch_wide"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "allpass_linear",
+      "ndcg": 0.388049,
+      "combination": "neural+allpass_linear"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "allpass_delay",
+      "ndcg": 0.388049,
+      "combination": "neural+allpass_delay"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "allpass_phase1",
+      "ndcg": 0.388049,
+      "combination": "neural+allpass_phase1"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "allpass_phase2",
+      "ndcg": 0.388049,
+      "combination": "neural+allpass_phase2"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "allpass_dispersive",
+      "ndcg": 0.388049,
+      "combination": "neural+allpass_dispersive"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "adaptive_smooth",
+      "ndcg": 0.388049,
+      "combination": "neural+adaptive_smooth"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "adaptive_sharp",
+      "ndcg": 0.388049,
+      "combination": "neural+adaptive_sharp"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "wiener_like",
+      "ndcg": 0.388049,
+      "combination": "neural+wiener_like"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "kalman_like",
+      "ndcg": 0.388049,
+      "combination": "neural+kalman_like"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "median_like",
+      "ndcg": 0.388049,
+      "combination": "neural+median_like"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "low_freq_enhance",
+      "ndcg": 0.388049,
+      "combination": "neural+low_freq_enhance"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "mid_freq_enhance",
+      "ndcg": 0.388049,
+      "combination": "neural+mid_freq_enhance"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "high_freq_enhance",
+      "ndcg": 0.388049,
+      "combination": "neural+high_freq_enhance"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "multi_band",
+      "ndcg": 0.388049,
+      "combination": "neural+multi_band"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "multi_band_v2",
+      "ndcg": 0.388049,
+      "combination": "neural+multi_band_v2"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "multi_band_v3",
+      "ndcg": 0.388049,
+      "combination": "neural+multi_band_v3"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "multi_band_aggressive",
+      "ndcg": 0.388049,
+      "combination": "neural+multi_band_aggressive"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "multi_band_gentle",
+      "ndcg": 0.388049,
+      "combination": "neural+multi_band_gentle"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "multi_band_balanced",
+      "ndcg": 0.388049,
+      "combination": "neural+multi_band_balanced"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "multi_band_wide",
+      "ndcg": 0.388049,
+      "combination": "neural+multi_band_wide"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "multi_band_narrow",
+      "ndcg": 0.388049,
+      "combination": "neural+multi_band_narrow"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "oscillatory_soft",
+      "ndcg": 0.388049,
+      "combination": "neural+oscillatory_soft"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "oscillatory_soft_v2",
+      "ndcg": 0.388049,
+      "combination": "neural+oscillatory_soft_v2"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "oscillatory_soft_v3",
+      "ndcg": 0.388049,
+      "combination": "neural+oscillatory_soft_v3"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "oscillatory_soft_plus",
+      "ndcg": 0.388049,
+      "combination": "neural+oscillatory_soft_plus"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "oscillatory_soft_minus",
+      "ndcg": 0.388049,
+      "combination": "neural+oscillatory_soft_minus"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_tuned_351",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_tuned_351"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_tuned_352",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_tuned_352"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_tuned_353",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_tuned_353"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_tuned_348",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_tuned_348"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_tuned_349",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_tuned_349"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_golden_ratio",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_golden_ratio"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_ratio_pure",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_ratio_pure"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_ratio_soft_v2",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_ratio_soft_v2"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_ratio_soft_v3",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_ratio_soft_v3"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_ratio_balanced",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_ratio_balanced"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "fibonacci_soft",
+      "ndcg": 0.388049,
+      "combination": "neural+fibonacci_soft"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "fibonacci_gentle",
+      "ndcg": 0.388049,
+      "combination": "neural+fibonacci_gentle"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "fibonacci_precise",
+      "ndcg": 0.388049,
+      "combination": "neural+fibonacci_precise"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "euler_soft",
+      "ndcg": 0.388049,
+      "combination": "neural+euler_soft"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "pi_ratio_soft",
+      "ndcg": 0.388049,
+      "combination": "neural+pi_ratio_soft"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "natural_harmony",
+      "ndcg": 0.388049,
+      "combination": "neural+natural_harmony"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_034",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_034"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_036",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_036"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_348",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_348"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_352",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_352"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_fibonacci_hybrid",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_fibonacci_hybrid"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_harmonic",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_harmonic"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_geometric",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_geometric"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "sacred_ratio_1",
+      "ndcg": 0.388049,
+      "combination": "neural+sacred_ratio_1"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "sacred_ratio_2",
+      "ndcg": 0.388049,
+      "combination": "neural+sacred_ratio_2"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_spiral",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_spiral"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "nautilus_pattern",
+      "ndcg": 0.388049,
+      "combination": "neural+nautilus_pattern"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "sunflower_spiral",
+      "ndcg": 0.388049,
+      "combination": "neural+sunflower_spiral"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "pine_cone_ratio",
+      "ndcg": 0.388049,
+      "combination": "neural+pine_cone_ratio"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "perfect_fifth",
+      "ndcg": 0.388049,
+      "combination": "neural+perfect_fifth"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_fourth",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_fourth"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "harmonic_series",
+      "ndcg": 0.388049,
+      "combination": "neural+harmonic_series"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_optimized_1",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_optimized_1"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_optimized_2",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_optimized_2"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "golden_optimized_3",
+      "ndcg": 0.388049,
+      "combination": "neural+golden_optimized_3"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_structured_1",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_structured_1"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_structured_2",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_structured_2"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_structured_3",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_structured_3"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_precise_1",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_precise_1"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_precise_2",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_precise_2"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_precise_3",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_precise_3"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_precise_4",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_precise_4"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_alt_strong",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_alt_strong"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_alt_weak",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_alt_weak"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_alt_balanced",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_alt_balanced"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_long_tail",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_long_tail"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_short_tail",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_short_tail"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_extended",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_extended"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_ratio_08",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_ratio_08"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_ratio_12",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_ratio_12"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "soft_ratio_09",
+      "ndcg": 0.388049,
+      "combination": "neural+soft_ratio_09"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_linear_decay",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_linear_decay"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_sqrt_decay",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_sqrt_decay"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_exp_decay",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_exp_decay"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_cubic_decay",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_cubic_decay"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_fibonacci",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_fibonacci"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_golden",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_golden"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_sine_like",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_sine_like"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_cosine_like",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_cosine_like"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "gentle_triangle",
+      "ndcg": 0.388049,
+      "combination": "neural+gentle_triangle"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "damped_oscillation_1",
+      "ndcg": 0.388049,
+      "combination": "neural+damped_oscillation_1"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "damped_oscillation_2",
+      "ndcg": 0.388049,
+      "combination": "neural+damped_oscillation_2"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "damped_oscillation_3",
+      "ndcg": 0.388049,
+      "combination": "neural+damped_oscillation_3"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "controlled_alt_soft",
+      "ndcg": 0.388049,
+      "combination": "neural+controlled_alt_soft"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "controlled_alt_medium",
+      "ndcg": 0.388049,
+      "combination": "neural+controlled_alt_medium"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "controlled_alt_fine",
+      "ndcg": 0.388049,
+      "combination": "neural+controlled_alt_fine"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "identity",
+      "ndcg": 0.388049,
+      "combination": "neural+identity"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "unity",
+      "ndcg": 0.388049,
+      "combination": "neural+unity"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "alternating",
+      "ndcg": 0.388049,
+      "combination": "neural+alternating"
+    },
+    {
+      "filter_design": "neural",
+      "init_filter": "exponential_decay",
+      "ndcg": 0.388049,
+      "combination": "neural+exponential_decay"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "unity",
+      "ndcg": 0.387889,
+      "combination": "original+unity"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "alternating",
+      "ndcg": 0.387853,
+      "combination": "adaptive+alternating"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "chebyshev_hp",
+      "ndcg": 0.387841,
+      "combination": "original+chebyshev_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "chebyshev_bp",
+      "ndcg": 0.387801,
+      "combination": "adaptive+chebyshev_bp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "bessel_bp",
+      "ndcg": 0.387767,
+      "combination": "adaptive+bessel_bp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "narrow_bp",
+      "ndcg": 0.387615,
+      "combination": "adaptive+narrow_bp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_hp",
+      "ndcg": 0.387424,
+      "combination": "original+gentle_hp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_ratio_pure",
+      "ndcg": 0.386934,
+      "combination": "original+golden_ratio_pure"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "multi_band_v2",
+      "ndcg": 0.386462,
+      "combination": "original+multi_band_v2"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "high_freq_enhance",
+      "ndcg": 0.386453,
+      "combination": "adaptive+high_freq_enhance"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "bessel_hp",
+      "ndcg": 0.386415,
+      "combination": "original+bessel_hp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "gaussian_bp",
+      "ndcg": 0.386139,
+      "combination": "adaptive+gaussian_bp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "butterworth_bp",
+      "ndcg": 0.386121,
+      "combination": "adaptive+butterworth_bp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "unity",
+      "ndcg": 0.385881,
+      "combination": "adaptive+unity"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "multi_band_aggressive",
+      "ndcg": 0.385695,
+      "combination": "original+multi_band_aggressive"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "multi_band_balanced",
+      "ndcg": 0.384423,
+      "combination": "original+multi_band_balanced"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "multi_band",
+      "ndcg": 0.384374,
+      "combination": "original+multi_band"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "wide_bp",
+      "ndcg": 0.383942,
+      "combination": "adaptive+wide_bp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "multi_band_gentle",
+      "ndcg": 0.383917,
+      "combination": "original+multi_band_gentle"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "multi_band_wide",
+      "ndcg": 0.383642,
+      "combination": "original+multi_band_wide"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "mid_freq_enhance",
+      "ndcg": 0.383268,
+      "combination": "adaptive+mid_freq_enhance"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "butterworth_hp",
+      "ndcg": 0.382913,
+      "combination": "original+butterworth_hp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "exponential_decay",
+      "ndcg": 0.382906,
+      "combination": "original+exponential_decay"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_036",
+      "ndcg": 0.382721,
+      "combination": "original+golden_036"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "oscillatory_soft_plus",
+      "ndcg": 0.382605,
+      "combination": "original+oscillatory_soft_plus"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_sqrt_decay",
+      "ndcg": 0.38252,
+      "combination": "original+gentle_sqrt_decay"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "multi_band_narrow",
+      "ndcg": 0.38246,
+      "combination": "original+multi_band_narrow"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_alt_strong",
+      "ndcg": 0.38244,
+      "combination": "original+soft_alt_strong"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_ratio_12",
+      "ndcg": 0.382432,
+      "combination": "original+soft_ratio_12"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_fourth",
+      "ndcg": 0.382431,
+      "combination": "original+golden_fourth"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "euler_soft",
+      "ndcg": 0.382388,
+      "combination": "original+euler_soft"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_fibonacci_hybrid",
+      "ndcg": 0.382371,
+      "combination": "original+golden_fibonacci_hybrid"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_ratio_09",
+      "ndcg": 0.382361,
+      "combination": "original+soft_ratio_09"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "nautilus_pattern",
+      "ndcg": 0.382356,
+      "combination": "original+nautilus_pattern"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "oscillatory_soft_v2",
+      "ndcg": 0.382336,
+      "combination": "original+oscillatory_soft_v2"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "perfect_fifth",
+      "ndcg": 0.382327,
+      "combination": "original+perfect_fifth"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "pine_cone_ratio",
+      "ndcg": 0.382323,
+      "combination": "original+pine_cone_ratio"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_ratio_08",
+      "ndcg": 0.382297,
+      "combination": "original+soft_ratio_08"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_spiral",
+      "ndcg": 0.382296,
+      "combination": "original+golden_spiral"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "fibonacci_soft",
+      "ndcg": 0.382254,
+      "combination": "original+fibonacci_soft"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "sacred_ratio_1",
+      "ndcg": 0.382247,
+      "combination": "original+sacred_ratio_1"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_ratio_soft_v2",
+      "ndcg": 0.382219,
+      "combination": "original+golden_ratio_soft_v2"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "fibonacci_precise",
+      "ndcg": 0.382216,
+      "combination": "original+fibonacci_precise"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "fibonacci_gentle",
+      "ndcg": 0.382198,
+      "combination": "original+fibonacci_gentle"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_geometric",
+      "ndcg": 0.382181,
+      "combination": "original+golden_geometric"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "sacred_ratio_2",
+      "ndcg": 0.382168,
+      "combination": "original+sacred_ratio_2"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_352",
+      "ndcg": 0.382158,
+      "combination": "original+golden_352"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_harmonic",
+      "ndcg": 0.382152,
+      "combination": "original+golden_harmonic"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "pi_ratio_soft",
+      "ndcg": 0.382144,
+      "combination": "original+pi_ratio_soft"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "natural_harmony",
+      "ndcg": 0.382143,
+      "combination": "original+natural_harmony"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_ratio_soft_v3",
+      "ndcg": 0.382117,
+      "combination": "original+golden_ratio_soft_v3"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "harmonic_series",
+      "ndcg": 0.382113,
+      "combination": "original+harmonic_series"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "sunflower_spiral",
+      "ndcg": 0.382099,
+      "combination": "original+sunflower_spiral"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_golden_ratio",
+      "ndcg": 0.382098,
+      "combination": "original+soft_golden_ratio"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_optimized_2",
+      "ndcg": 0.382096,
+      "combination": "original+golden_optimized_2"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_ratio_balanced",
+      "ndcg": 0.382092,
+      "combination": "original+golden_ratio_balanced"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_tuned_353",
+      "ndcg": 0.382078,
+      "combination": "original+soft_tuned_353"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_348",
+      "ndcg": 0.382058,
+      "combination": "original+golden_348"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_034",
+      "ndcg": 0.382056,
+      "combination": "original+golden_034"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_optimized_3",
+      "ndcg": 0.382046,
+      "combination": "original+golden_optimized_3"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_tuned_352",
+      "ndcg": 0.382045,
+      "combination": "original+soft_tuned_352"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "golden_optimized_1",
+      "ndcg": 0.38204,
+      "combination": "original+golden_optimized_1"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "allpass_dispersive",
+      "ndcg": 0.382031,
+      "combination": "original+allpass_dispersive"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_tuned_351",
+      "ndcg": 0.381998,
+      "combination": "original+soft_tuned_351"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_structured_1",
+      "ndcg": 0.381993,
+      "combination": "original+soft_structured_1"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_fibonacci",
+      "ndcg": 0.381989,
+      "combination": "original+gentle_fibonacci"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_structured_2",
+      "ndcg": 0.381987,
+      "combination": "original+soft_structured_2"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_short_tail",
+      "ndcg": 0.38194,
+      "combination": "original+soft_short_tail"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_precise_4",
+      "ndcg": 0.381938,
+      "combination": "original+soft_precise_4"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_alt_balanced",
+      "ndcg": 0.381932,
+      "combination": "original+soft_alt_balanced"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_cosine_like",
+      "ndcg": 0.381923,
+      "combination": "original+gentle_cosine_like"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "oscillatory_soft",
+      "ndcg": 0.381855,
+      "combination": "original+oscillatory_soft"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_extended",
+      "ndcg": 0.381855,
+      "combination": "original+soft_extended"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_precise_2",
+      "ndcg": 0.381825,
+      "combination": "original+soft_precise_2"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_alt_weak",
+      "ndcg": 0.381819,
+      "combination": "original+soft_alt_weak"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_precise_1",
+      "ndcg": 0.381804,
+      "combination": "original+soft_precise_1"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_tuned_349",
+      "ndcg": 0.381802,
+      "combination": "original+soft_tuned_349"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_tuned_348",
+      "ndcg": 0.381789,
+      "combination": "original+soft_tuned_348"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_long_tail",
+      "ndcg": 0.381789,
+      "combination": "original+soft_long_tail"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_structured_3",
+      "ndcg": 0.381776,
+      "combination": "original+soft_structured_3"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "soft_precise_3",
+      "ndcg": 0.381739,
+      "combination": "original+soft_precise_3"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "oscillatory_soft_v3",
+      "ndcg": 0.381711,
+      "combination": "original+oscillatory_soft_v3"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_golden",
+      "ndcg": 0.381693,
+      "combination": "original+gentle_golden"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "narrow_bp",
+      "ndcg": 0.38166,
+      "combination": "original+narrow_bp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "multi_band_v3",
+      "ndcg": 0.381513,
+      "combination": "original+multi_band_v3"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "controlled_alt_medium",
+      "ndcg": 0.381426,
+      "combination": "original+controlled_alt_medium"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "oscillatory_soft_minus",
+      "ndcg": 0.381392,
+      "combination": "original+oscillatory_soft_minus"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "allpass_phase2",
+      "ndcg": 0.381061,
+      "combination": "original+allpass_phase2"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "damped_oscillation_1",
+      "ndcg": 0.380833,
+      "combination": "original+damped_oscillation_1"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_triangle",
+      "ndcg": 0.380812,
+      "combination": "original+gentle_triangle"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "damped_oscillation_3",
+      "ndcg": 0.380806,
+      "combination": "original+damped_oscillation_3"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "damped_oscillation_2",
+      "ndcg": 0.3808,
+      "combination": "original+damped_oscillation_2"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "controlled_alt_soft",
+      "ndcg": 0.380704,
+      "combination": "original+controlled_alt_soft"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "controlled_alt_fine",
+      "ndcg": 0.380561,
+      "combination": "original+controlled_alt_fine"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "high_freq_enhance",
+      "ndcg": 0.380357,
+      "combination": "original+high_freq_enhance"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_exp_decay",
+      "ndcg": 0.380144,
+      "combination": "original+gentle_exp_decay"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_sine_like",
+      "ndcg": 0.380143,
+      "combination": "original+gentle_sine_like"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "butterworth",
+      "ndcg": 0.380137,
+      "combination": "original+butterworth"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "allpass_linear",
+      "ndcg": 0.38013,
+      "combination": "original+allpass_linear"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "identity",
+      "ndcg": 0.38013,
+      "combination": "original+identity"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_cubic_decay",
+      "ndcg": 0.378793,
+      "combination": "original+gentle_cubic_decay"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gentle_linear_decay",
+      "ndcg": 0.378742,
+      "combination": "original+gentle_linear_decay"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "allpass_phase1",
+      "ndcg": 0.378245,
+      "combination": "original+allpass_phase1"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "adaptive_sharp",
+      "ndcg": 0.377844,
+      "combination": "original+adaptive_sharp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "smooth",
+      "ndcg": 0.377752,
+      "combination": "original+smooth"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "aggressive",
+      "ndcg": 0.377503,
+      "combination": "original+aggressive"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "elliptic_lp",
+      "ndcg": 0.377431,
+      "combination": "original+elliptic_lp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "bessel_bp",
+      "ndcg": 0.377309,
+      "combination": "original+bessel_bp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "hamming_lp",
+      "ndcg": 0.376828,
+      "combination": "original+hamming_lp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "chebyshev",
+      "ndcg": 0.376555,
+      "combination": "original+chebyshev"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "bessel",
+      "ndcg": 0.376502,
+      "combination": "original+bessel"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "wiener_like",
+      "ndcg": 0.376448,
+      "combination": "original+wiener_like"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "adaptive_smooth",
+      "ndcg": 0.37635,
+      "combination": "original+adaptive_smooth"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "kalman_like",
+      "ndcg": 0.376238,
+      "combination": "original+kalman_like"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "median_like",
+      "ndcg": 0.375422,
+      "combination": "original+median_like"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "conservative",
+      "ndcg": 0.375395,
+      "combination": "original+conservative"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gaussian",
+      "ndcg": 0.375058,
+      "combination": "original+gaussian"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "chebyshev_bp",
+      "ndcg": 0.372001,
+      "combination": "original+chebyshev_bp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "alternating",
+      "ndcg": 0.37083,
+      "combination": "original+alternating"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "butterworth_bp",
+      "ndcg": 0.368953,
+      "combination": "original+butterworth_bp"
+    },
+    {
+      "filter_design": "adaptive",
+      "init_filter": "allpass_delay",
+      "ndcg": 0.366814,
+      "combination": "adaptive+allpass_delay"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "gaussian_bp",
+      "ndcg": 0.364175,
+      "combination": "original+gaussian_bp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "low_freq_enhance",
+      "ndcg": 0.36062,
+      "combination": "original+low_freq_enhance"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "bessel_bs",
+      "ndcg": 0.347332,
+      "combination": "original+bessel_bs"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "notch_wide",
+      "ndcg": 0.345333,
+      "combination": "original+notch_wide"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "wide_bp",
+      "ndcg": 0.345093,
+      "combination": "original+wide_bp"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "chebyshev_bs",
+      "ndcg": 0.343271,
+      "combination": "original+chebyshev_bs"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "butterworth_bs",
+      "ndcg": 0.337497,
+      "combination": "original+butterworth_bs"
+    },
+    {
+      "filter_design": "original",
+      "init_filter": "notch_sharp",
+      "ndcg": 0.337296,
+      "combination": "original+notch_sharp"
+    }
+  ],
+  "summary": {
+    "total_experiments": 732,
+    "best_ndcg": 0.392643,
+    "best_combination": "original+allpass_delay",
+    "test_mode": "quick",
+    "timestamp": "2025-06-05 21:04:50"
+  }
+}

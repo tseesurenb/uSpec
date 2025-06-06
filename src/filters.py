@@ -1,280 +1,77 @@
 """
 Filter Patterns for Universal Spectral Collaborative Filtering
-Comprehensive collection of digital filter coefficients for various filtering applications
+Focused on recommendation-relevant filters with enhanced capacity models
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 Created: June 4, 2025
 """
 
 import torch
+import torch.nn as nn
 import numpy as np
 
-# Main filter patterns dictionary
+# Recommendation-relevant filter patterns (cleaned up)
 filter_patterns = {
-    # Low-pass filters (Smoothing filters)
-    'butterworth': [1.0, -0.6, 0.2, -0.05, 0.01, -0.002, 0.0003, -0.00005],
-    'chebyshev': [1.0, -0.4, 0.1, -0.01, 0.001, -0.0001, 0.00001, -0.000001],
+    # Core smoothing filters (essential for CF)
     'smooth': [1.0, -0.5, 0.1, -0.02, 0.004, -0.0008, 0.00015, -0.00003],
-    'bessel': [1.0, -0.3, 0.06, -0.008, 0.0008, -0.00006, 0.000004, -0.0000002],
+    'butterworth': [1.0, -0.6, 0.2, -0.05, 0.01, -0.002, 0.0003, -0.00005],
     'gaussian': [1.0, -0.7, 0.15, -0.03, 0.005, -0.0007, 0.00008, -0.000008],
+    'bessel': [1.0, -0.3, 0.06, -0.008, 0.0008, -0.00006, 0.000004, -0.0000002],
     'conservative': [1.0, -0.2, 0.03, -0.002, 0.0001, -0.000005, 0.0000002, -0.00000001],
-    'aggressive': [1.0, -0.8, 0.3, -0.08, 0.015, -0.002, 0.0002, -0.00002],
-    'elliptic_lp': [1.0, -0.5, 0.12, -0.018, 0.002, -0.0002, 0.00002, -0.000002],
-    'hamming_lp': [1.0, -0.45, 0.08, -0.012, 0.0015, -0.00015, 0.000012, -0.000001],
     
-    # High-pass filters (Detail preservation)
-    'butterworth_hp': [0.0001, 0.002, -0.01, 0.05, -0.2, 0.6, -1.0, 1.0],
-    'chebyshev_hp': [0.000001, 0.00001, -0.0001, 0.001, -0.01, 0.1, -0.4, 1.0],
-    'bessel_hp': [0.0000002, 0.000004, -0.00006, 0.0008, -0.008, 0.06, -0.3, 1.0],
-    'elliptic_hp': [0.000002, 0.00002, -0.0002, 0.002, -0.018, 0.12, -0.5, 1.0],
-    'aggressive_hp': [0.00002, 0.0002, -0.002, 0.015, -0.08, 0.3, -0.8, 1.0],
-    'gentle_hp': [0.00000001, 0.0000002, -0.000005, 0.0001, -0.002, 0.03, -0.2, 1.0],
-    
-    # Band-pass filters (Mid-frequency emphasis)
-    'butterworth_bp': [0.001, -0.05, 0.3, -0.7, 0.8, -0.4, 0.1, -0.01],
-    'chebyshev_bp': [0.002, -0.08, 0.25, -0.6, 0.75, -0.35, 0.08, -0.008],
-    'bessel_bp': [0.0005, -0.03, 0.2, -0.5, 0.6, -0.3, 0.06, -0.005],
-    'gaussian_bp': [0.003, -0.12, 0.4, -0.8, 0.9, -0.45, 0.12, -0.015],
-    'narrow_bp': [0.0001, -0.01, 0.15, -0.4, 0.5, -0.25, 0.05, -0.003],
-    'wide_bp': [0.01, -0.2, 0.6, -1.2, 1.3, -0.65, 0.2, -0.03],
-    
-    # Band-stop (notch) filters (Frequency removal)
-    'butterworth_bs': [1.0, -0.2, -0.3, 0.7, -0.8, 0.4, -0.1, 0.01],
-    'chebyshev_bs': [1.0, -0.15, -0.25, 0.6, -0.75, 0.35, -0.08, 0.008],
-    'bessel_bs': [1.0, -0.1, -0.2, 0.5, -0.6, 0.3, -0.06, 0.005],
-    'notch_sharp': [1.0, -0.05, -0.4, 0.9, -1.0, 0.5, -0.12, 0.015],
-    'notch_wide': [1.0, -0.3, -0.1, 0.4, -0.5, 0.25, -0.05, 0.003],
-    
-    # All-pass filters (Phase modification)
-    'allpass_linear': [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    'allpass_delay': [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    'allpass_phase1': [1.0, 0.2, -0.15, 0.1, -0.05, 0.02, -0.01, 0.005],
-    'allpass_phase2': [1.0, -0.3, 0.2, -0.1, 0.05, -0.02, 0.01, -0.005],
-    'allpass_dispersive': [1.0, 0.1, -0.05, 0.02, -0.01, 0.005, -0.002, 0.001],
-    
-    # Adaptive and specialized filters
-    'adaptive_smooth': [1.0, -0.4, 0.08, -0.008, 0.0006, -0.00003, 0.000001, 0.0],
-    'adaptive_sharp': [1.0, -0.7, 0.25, -0.05, 0.008, -0.001, 0.0001, -0.00001],
-    'wiener_like': [1.0, -0.35, 0.06, -0.005, 0.0003, -0.00001, 0.0000003, 0.0],
-    'kalman_like': [1.0, -0.55, 0.12, -0.015, 0.0012, -0.00007, 0.000003, 0.0],
-    'median_like': [1.0, -0.25, 0.04, -0.003, 0.0001, -0.000003, 0.0000001, 0.0],
-    
-    # Frequency-specific filters
-    'low_freq_enhance': [1.2, -0.8, 0.3, -0.08, 0.015, -0.002, 0.0002, -0.00002],
-    'mid_freq_enhance': [0.8, -0.2, 0.6, -0.4, 0.15, -0.03, 0.004, -0.0003],
-    'high_freq_enhance': [0.2, -0.1, 0.3, -0.5, 0.7, -0.6, 0.4, -0.2],
-    'multi_band': [1.0, -0.3, 0.2, -0.4, 0.3, -0.2, 0.1, -0.05],
-    
-    # Multi-band variants (similar to multi_band)
-    'multi_band_v2': [1.0, -0.4, 0.25, -0.35, 0.25, -0.15, 0.08, -0.04],
-    'multi_band_v3': [1.0, -0.25, 0.15, -0.45, 0.35, -0.25, 0.12, -0.06],
-    'multi_band_aggressive': [1.0, -0.5, 0.3, -0.6, 0.4, -0.3, 0.15, -0.08],
-    'multi_band_gentle': [1.0, -0.2, 0.1, -0.3, 0.2, -0.1, 0.05, -0.02],
-    'multi_band_balanced': [1.0, -0.35, 0.22, -0.38, 0.28, -0.18, 0.09, -0.045],
-    'multi_band_wide': [1.0, -0.45, 0.35, -0.25, 0.15, -0.25, 0.2, -0.1],
-    'multi_band_narrow': [1.0, -0.15, 0.08, -0.5, 0.4, -0.15, 0.06, -0.03],
-    
-    # Soft oscillatory variants (based on oscillatory_soft success)
-    'oscillatory_soft': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.084, 0.042, -0.021],
-    'oscillatory_soft_v2': [1.0, -0.36, 0.1296, -0.216, 0.1728, -0.0864, 0.0432, -0.0216],
-    'oscillatory_soft_v3': [1.0, -0.34, 0.1156, -0.204, 0.1632, -0.0816, 0.0408, -0.0204],
-    'oscillatory_soft_plus': [1.0, -0.37, 0.1369, -0.222, 0.1776, -0.0888, 0.0444, -0.0222],
-    'oscillatory_soft_minus': [1.0, -0.33, 0.1089, -0.198, 0.1584, -0.0792, 0.0396, -0.0198],
-    
-    # Fine-tuned around the 0.35 coefficient
-    'soft_tuned_351': [1.0, -0.351, 0.123201, -0.2106, 0.16848, -0.08424, 0.04212, -0.02106],
-    'soft_tuned_352': [1.0, -0.352, 0.123904, -0.2112, 0.16896, -0.08448, 0.04224, -0.02112],
-    'soft_tuned_353': [1.0, -0.353, 0.124609, -0.2118, 0.16944, -0.08472, 0.04236, -0.02118],
-    'soft_tuned_348': [1.0, -0.348, 0.121104, -0.2088, 0.16704, -0.08352, 0.04176, -0.02088],
-    'soft_tuned_349': [1.0, -0.349, 0.121801, -0.2094, 0.16752, -0.08376, 0.04188, -0.02094],
-    
-    # Golden ratio and natural mathematics variants (based on soft_golden_ratio success)
-    'soft_golden_ratio': [1.0, -0.35, 0.1225, -0.214, 0.1519, -0.0855, 0.0532, -0.0329],
-    'golden_ratio_pure': [1.0, -0.618, 0.382, -0.236, 0.146, -0.09, 0.056, -0.034],
-    'golden_ratio_soft_v2': [1.0, -0.35, 0.1225, -0.217, 0.1526, -0.0861, 0.0535, -0.0331],
-    'golden_ratio_soft_v3': [1.0, -0.35, 0.1225, -0.211, 0.1512, -0.0849, 0.0529, -0.0327],
-    'golden_ratio_balanced': [1.0, -0.35, 0.1225, -0.215, 0.152, -0.0857, 0.0533, -0.033],
-    
-    # Fibonacci sequence variations
-    'fibonacci_soft': [1.0, -0.35, 0.1225, -0.213, 0.1597, -0.0987, 0.061, -0.0377],
-    'fibonacci_gentle': [1.0, -0.35, 0.1225, -0.212, 0.1584, -0.0979, 0.0605, -0.0374],
-    'fibonacci_precise': [1.0, -0.35, 0.1225, -0.2135, 0.1597, -0.0987, 0.061, -0.0377],
-    
-    # Natural constants (e, π, φ) inspired
-    'euler_soft': [1.0, -0.35, 0.1225, -0.2148, 0.1445, -0.0872, 0.0531, -0.0324],
-    'pi_ratio_soft': [1.0, -0.35, 0.1225, -0.2146, 0.1592, -0.1019, 0.0648, -0.0414],
-    'natural_harmony': [1.0, -0.35, 0.1225, -0.2142, 0.1528, -0.0866, 0.0541, -0.0334],
-    
-    # Golden ratio with different base coefficients
+    # Golden ratio variants (high-performance for CF)
     'golden_034': [1.0, -0.34, 0.1156, -0.208, 0.1473, -0.0829, 0.0516, -0.0319],
     'golden_036': [1.0, -0.36, 0.1296, -0.220, 0.1564, -0.088, 0.0548, -0.0339],
     'golden_348': [1.0, -0.348, 0.121104, -0.2115, 0.1502, -0.0846, 0.0526, -0.0325],
     'golden_352': [1.0, -0.352, 0.123904, -0.2125, 0.1511, -0.0851, 0.0529, -0.0327],
-    
-    # Mathematical series combinations
-    'golden_fibonacci_hybrid': [1.0, -0.35, 0.1225, -0.2142, 0.1597, -0.0901, 0.0566, -0.0351],
-    'golden_harmonic': [1.0, -0.35, 0.1225, -0.2145, 0.1458, -0.0875, 0.0583, -0.0389],
-    'golden_geometric': [1.0, -0.35, 0.1225, -0.2141, 0.1497, -0.0859, 0.0531, -0.0322],
-    
-    # Sacred geometry inspired (phi, golden angle, etc.)
-    'sacred_ratio_1': [1.0, -0.35, 0.1225, -0.2144, 0.1539, -0.0888, 0.0549, -0.0340],
-    'sacred_ratio_2': [1.0, -0.35, 0.1225, -0.2138, 0.1499, -0.0823, 0.0515, -0.0317],
-    'golden_spiral': [1.0, -0.35, 0.1225, -0.2143, 0.1618, -0.0955, 0.0618, -0.0382],
-    
-    # Nature-inspired mathematical patterns
-    'nautilus_pattern': [1.0, -0.35, 0.1225, -0.2142, 0.1534, -0.0947, 0.0585, -0.0361],
-    'sunflower_spiral': [1.0, -0.35, 0.1225, -0.2147, 0.1472, -0.0859, 0.0574, -0.0347],
-    'pine_cone_ratio': [1.0, -0.35, 0.1225, -0.2140, 0.1556, -0.0901, 0.0542, -0.0334],
-    
-    # Musical harmony ratios
-    'perfect_fifth': [1.0, -0.35, 0.1225, -0.213, 0.1472, -0.0884, 0.0531, -0.0354],
-    'golden_fourth': [1.0, -0.35, 0.1225, -0.2146, 0.1562, -0.0937, 0.0562, -0.0337],
-    'harmonic_series': [1.0, -0.35, 0.1225, -0.2142, 0.1519, -0.0844, 0.0563, -0.0352],
-    
-    # Fine-tuned golden variations
+    'soft_golden_ratio': [1.0, -0.35, 0.1225, -0.214, 0.1519, -0.0855, 0.0532, -0.0329],
+    'golden_ratio_balanced': [1.0, -0.35, 0.1225, -0.215, 0.152, -0.0857, 0.0533, -0.033],
     'golden_optimized_1': [1.0, -0.35, 0.1225, -0.2142, 0.1519, -0.0856, 0.0533, -0.033],
     'golden_optimized_2': [1.0, -0.35, 0.1225, -0.2141, 0.1518, -0.0854, 0.0531, -0.0328],
     'golden_optimized_3': [1.0, -0.35, 0.1225, -0.2143, 0.152, -0.0857, 0.0534, -0.0331],
     
-    # Structured decay variants
-    'soft_structured_1': [1.0, -0.35, 0.12, -0.21, 0.17, -0.085, 0.043, -0.021],
-    'soft_structured_2': [1.0, -0.35, 0.125, -0.21, 0.165, -0.083, 0.041, -0.0205],
-    'soft_structured_3': [1.0, -0.35, 0.123, -0.21, 0.167, -0.084, 0.042, -0.021],
+    # Oscillatory soft patterns (empirically good for CF)
+    'oscillatory_soft': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.084, 0.042, -0.021],
+    'oscillatory_soft_v2': [1.0, -0.36, 0.1296, -0.216, 0.1728, -0.0864, 0.0432, -0.0216],
+    'oscillatory_soft_v3': [1.0, -0.34, 0.1156, -0.204, 0.1632, -0.0816, 0.0408, -0.0204],
     
-    # Precision variants (small adjustments)
-    'soft_precise_1': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.0835, 0.0418, -0.0209],
-    'soft_precise_2': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.0845, 0.0422, -0.0211],
-    'soft_precise_3': [1.0, -0.35, 0.1225, -0.209, 0.168, -0.084, 0.042, -0.021],
-    'soft_precise_4': [1.0, -0.35, 0.1225, -0.211, 0.168, -0.084, 0.042, -0.021],
+    # Fine-tuned coefficients around optimal range
+    'soft_tuned_351': [1.0, -0.351, 0.123201, -0.2106, 0.16848, -0.08424, 0.04212, -0.02106],
+    'soft_tuned_352': [1.0, -0.352, 0.123904, -0.2112, 0.16896, -0.08448, 0.04224, -0.02112],
+    'soft_tuned_353': [1.0, -0.353, 0.124609, -0.2118, 0.16944, -0.08472, 0.04236, -0.02118],
     
-    # Soft with different alternation patterns
-    'soft_alt_strong': [1.0, -0.35, 0.1225, -0.22, 0.168, -0.084, 0.042, -0.021],
-    'soft_alt_weak': [1.0, -0.35, 0.1225, -0.20, 0.168, -0.084, 0.042, -0.021],
-    'soft_alt_balanced': [1.0, -0.35, 0.1225, -0.2125, 0.168, -0.084, 0.042, -0.021],
+    # Natural mathematics patterns
+    'fibonacci_soft': [1.0, -0.35, 0.1225, -0.213, 0.1597, -0.0987, 0.061, -0.0377],
+    'euler_soft': [1.0, -0.35, 0.1225, -0.2148, 0.1445, -0.0872, 0.0531, -0.0324],
+    'natural_harmony': [1.0, -0.35, 0.1225, -0.2142, 0.1528, -0.0866, 0.0541, -0.0334],
     
-    # Soft with modified tail behavior
-    'soft_long_tail': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.084, 0.045, -0.024],
-    'soft_short_tail': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.084, 0.039, -0.018],
-    'soft_extended': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.084, 0.042, -0.0215],
+    # Multi-band for complex patterns
+    'multi_band': [1.0, -0.3, 0.2, -0.4, 0.3, -0.2, 0.1, -0.05],
+    'multi_band_balanced': [1.0, -0.35, 0.22, -0.38, 0.28, -0.18, 0.09, -0.045],
     
-    # Soft with ratio modifications
-    'soft_ratio_08': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.0672, 0.0336, -0.0168],
-    'soft_ratio_12': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.1008, 0.0504, -0.0252],
-    'soft_ratio_09': [1.0, -0.35, 0.1225, -0.21, 0.168, -0.0756, 0.0378, -0.0189],
+    # Adaptive-like patterns
+    'wiener_like': [1.0, -0.35, 0.06, -0.005, 0.0003, -0.00001, 0.0000003, 0.0],
+    'adaptive_smooth': [1.0, -0.4, 0.08, -0.008, 0.0006, -0.00003, 0.000001, 0.0],
     
-    # Gentle patterns with different decay rates
-    'gentle_linear_decay': [1.0, -0.3, 0.06, -0.15, 0.12, -0.09, 0.06, -0.03],
-    'gentle_sqrt_decay': [1.0, -0.3, 0.1342, -0.1732, 0.1342, -0.1095, 0.0894, -0.0775],
-    'gentle_exp_decay': [1.0, -0.3, 0.09, -0.162, 0.1296, -0.0778, 0.0467, -0.028],
-    'gentle_cubic_decay': [1.0, -0.3, 0.027, -0.135, 0.1215, -0.0729, 0.0437, -0.0262],
-    
-    # Fibonacci-ratio gentle patterns
-    'gentle_fibonacci': [1.0, -0.309, 0.0955, -0.191, 0.118, -0.073, 0.045, -0.028],
-    'gentle_golden': [1.0, -0.318, 0.101, -0.196, 0.124, -0.079, 0.05, -0.032],
-    
-    # Wave-like gentle patterns
-    'gentle_sine_like': [1.0, -0.3, 0.07, -0.17, 0.135, -0.068, 0.034, -0.017],
-    'gentle_cosine_like': [1.0, -0.29, 0.1, -0.175, 0.14, -0.07, 0.035, -0.0175],
-    'gentle_triangle': [1.0, -0.31, 0.093, -0.186, 0.149, -0.074, 0.037, -0.0186],
-    
-    # Damped oscillations (physics-inspired)
-    'damped_oscillation_1': [1.0, -0.3, 0.08, -0.17, 0.13, -0.065, 0.032, -0.016],
-    'damped_oscillation_2': [1.0, -0.31, 0.095, -0.185, 0.145, -0.075, 0.038, -0.019],
-    'damped_oscillation_3': [1.0, -0.29, 0.085, -0.175, 0.135, -0.07, 0.035, -0.0175],
-    
-    # Controlled alternation patterns
-    'controlled_alt_soft': [1.0, -0.27, 0.073, -0.162, 0.1296, -0.0648, 0.0324, -0.0162],
-    'controlled_alt_medium': [1.0, -0.33, 0.109, -0.198, 0.1584, -0.0792, 0.0396, -0.0198],
-    'controlled_alt_fine': [1.0, -0.285, 0.081, -0.171, 0.1368, -0.0684, 0.0342, -0.0171],
-    
-    # Harmonic series (musical/natural patterns)
-    'harmonic_fundamental': [1.0, -0.5, 0.33, -0.25, 0.2, -0.167, 0.143, -0.125],
-    'harmonic_rich': [1.0, -0.33, 0.2, -0.5, 0.25, -0.167, 0.143, -0.111],
-    'harmonic_sparse': [1.0, -0.25, 0.125, -0.333, 0.167, -0.1, 0.071, -0.063],
-    
-    # Fibonacci-inspired (natural growth patterns)
-    'fibonacci_alt': [1.0, -0.618, 0.382, -0.236, 0.146, -0.09, 0.056, -0.034],
-    'fibonacci_decay': [1.0, -0.382, 0.146, -0.236, 0.09, -0.146, 0.056, -0.034],
-    
-    # Resonance patterns (emphasize specific frequency relationships)
-    'resonance_1_3': [1.0, -0.2, 0.6, -0.1, 0.4, -0.05, 0.2, -0.02],
-    'resonance_2_5': [1.0, -0.4, 0.1, -0.6, 0.05, -0.4, 0.02, -0.2],
-    'resonance_balanced': [1.0, -0.3, 0.4, -0.2, 0.3, -0.15, 0.2, -0.1],
-    
-    # Spectral envelope patterns
-    'envelope_triangle': [1.0, -0.4, 0.6, -0.8, 0.6, -0.4, 0.2, -0.1],
-    'envelope_trapezoid': [1.0, -0.3, 0.5, -0.5, 0.5, -0.5, 0.3, -0.1],
-    'envelope_gaussian': [1.0, -0.35, 0.45, -0.55, 0.45, -0.35, 0.25, -0.15],
-    
-    # Edge detection and derivative filters
-    'edge_detect': [0.0, 0.5, -1.0, 0.5, 0.0, 0.0, 0.0, 0.0],
-    'gradient_x': [-0.5, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0],
-    'laplacian': [0.0, 1.0, -2.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-    'sobel_like': [-0.25, 0.0, 0.25, -0.5, 0.0, 0.5, -0.25, 0.25],
-    
-    # Noise reduction filters
-    'denoise_gentle': [1.0, -0.1, 0.01, -0.001, 0.0001, 0.0, 0.0, 0.0],
-    'denoise_moderate': [1.0, -0.3, 0.05, -0.005, 0.0003, -0.00001, 0.0, 0.0],
-    'denoise_strong': [1.0, -0.6, 0.15, -0.025, 0.003, -0.0002, 0.00001, 0.0],
-    'bilateral_like': [1.0, -0.4, 0.08, -0.008, 0.0004, -0.00001, 0.0, 0.0],
-    
-    # Identity and special cases
+    # Essential baselines
     'identity': [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    'unity': [0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125],
-    'alternating': [1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0],
     'exponential_decay': [1.0, -0.5, 0.25, -0.125, 0.0625, -0.03125, 0.015625, -0.0078125]
 }
 
-# Filter categories for easy reference
+# Simplified categories focused on CF
 filter_categories = {
-    'lowpass': ['butterworth', 'chebyshev', 'smooth', 'bessel', 'gaussian', 'conservative', 
-                'aggressive', 'elliptic_lp', 'hamming_lp'],
-    'highpass': ['butterworth_hp', 'chebyshev_hp', 'bessel_hp', 'elliptic_hp', 
-                 'aggressive_hp', 'gentle_hp'],
-    'bandpass': ['butterworth_bp', 'chebyshev_bp', 'bessel_bp', 'gaussian_bp', 
-                 'narrow_bp', 'wide_bp'],
-    'bandstop': ['butterworth_bs', 'chebyshev_bs', 'bessel_bs', 'notch_sharp', 'notch_wide'],
-    'allpass': ['allpass_linear', 'allpass_delay', 'allpass_phase1', 'allpass_phase2', 
-                'allpass_dispersive'],
-    'adaptive': ['adaptive_smooth', 'adaptive_sharp', 'wiener_like', 'kalman_like', 'median_like'],
-    'frequency_specific': ['low_freq_enhance', 'mid_freq_enhance', 'high_freq_enhance', 'multi_band',
-                           'multi_band_v2', 'multi_band_v3', 'multi_band_aggressive', 'multi_band_gentle',
-                           'multi_band_balanced', 'multi_band_wide', 'multi_band_narrow', 'oscillatory_decay',
-                           'oscillatory_moderate', 'oscillatory_strong', 'oscillatory_gentle', 
-                           'oscillatory_ultra_gentle', 'oscillatory_micro', 'oscillatory_soft',
-                           'oscillatory_soft_v2', 'oscillatory_soft_v3', 'oscillatory_soft_plus', 'oscillatory_soft_minus',
-                           'soft_tuned_351', 'soft_tuned_352', 'soft_tuned_353', 'soft_tuned_348', 'soft_tuned_349',
-                           'soft_golden_ratio', 'soft_sqrt_pattern', 'soft_cubic_pattern', 'soft_harmonic',
-                           'soft_structured_1', 'soft_structured_2', 'soft_structured_3',
-                           'soft_precise_1', 'soft_precise_2', 'soft_precise_3', 'soft_precise_4',
-                           'soft_alt_strong', 'soft_alt_weak', 'soft_alt_balanced',
-                           'soft_long_tail', 'soft_short_tail', 'soft_extended',
-                           'soft_ratio_08', 'soft_ratio_12', 'soft_ratio_09',
-                           'oscillatory_smooth', 'oscillatory_subtle', 'oscillatory_refined', 'oscillatory_calm',
-                           'gentle_linear_decay', 'gentle_sqrt_decay', 'gentle_exp_decay', 'gentle_cubic_decay',
-                           'gentle_fibonacci', 'gentle_golden', 'gentle_sine_like', 'gentle_cosine_like',
-                           'gentle_triangle', 'damped_oscillation_1', 'damped_oscillation_2', 'damped_oscillation_3',
-                           'controlled_alt_soft', 'controlled_alt_medium', 'controlled_alt_fine',
-                           'harmonic_fundamental', 'harmonic_rich', 'harmonic_sparse', 'fibonacci_alt', 
-                           'fibonacci_decay', 'resonance_1_3', 'resonance_2_5', 'resonance_balanced', 
-                           'envelope_triangle', 'envelope_trapezoid', 'envelope_gaussian'],
-    'edge_detection': ['edge_detect', 'gradient_x', 'laplacian', 'sobel_like'],
-    'noise_reduction': ['denoise_gentle', 'denoise_moderate', 'denoise_strong', 'bilateral_like'],
-    'special': ['identity', 'unity', 'alternating', 'exponential_decay']
+    'golden': ['golden_034', 'golden_036', 'golden_348', 'golden_352', 'soft_golden_ratio', 
+               'golden_ratio_balanced', 'golden_optimized_1', 'golden_optimized_2', 'golden_optimized_3'],
+    'soft': ['oscillatory_soft', 'oscillatory_soft_v2', 'oscillatory_soft_v3', 
+             'soft_tuned_351', 'soft_tuned_352', 'soft_tuned_353'],
+    'lowpass': ['smooth', 'butterworth', 'gaussian', 'bessel', 'conservative'],
+    'mathematical': ['fibonacci_soft', 'euler_soft', 'natural_harmony'],
+    'adaptive': ['wiener_like', 'adaptive_smooth', 'multi_band', 'multi_band_balanced'],
+    'baseline': ['identity', 'exponential_decay']
 }
 
 def get_filter_coefficients(filter_name, order=None, as_tensor=False):
-    """
-    Get filter coefficients by name.
-    
-    Args:
-        filter_name (str): Name of the filter pattern
-        order (int, optional): If specified, truncate or pad coefficients to this order
-        as_tensor (bool): If True, return as PyTorch tensor, else return as list
-    
-    Returns:
-        list or torch.Tensor: Filter coefficients
-    """
+    """Get filter coefficients by name."""
     if filter_name not in filter_patterns:
         raise ValueError(f"Unknown filter pattern: {filter_name}. Available: {list(filter_patterns.keys())}")
     
@@ -292,15 +89,7 @@ def get_filter_coefficients(filter_name, order=None, as_tensor=False):
     return coeffs
 
 def list_filters_by_category(category=None):
-    """
-    List available filters, optionally by category.
-    
-    Args:
-        category (str, optional): Filter category ('lowpass', 'highpass', etc.)
-    
-    Returns:
-        list: Filter names
-    """
+    """List available filters by category."""
     if category is None:
         return list(filter_patterns.keys())
     
@@ -309,67 +98,482 @@ def list_filters_by_category(category=None):
     
     return filter_categories[category]
 
-def get_filter_info(filter_name):
-    """
-    Get information about a specific filter.
-    
-    Args:
-        filter_name (str): Name of the filter pattern
-    
-    Returns:
-        dict: Filter information including coefficients, category, and properties
-    """
-    if filter_name not in filter_patterns:
-        raise ValueError(f"Unknown filter pattern: {filter_name}")
-    
-    # Find which category this filter belongs to
-    category = None
-    for cat, filters in filter_categories.items():
-        if filter_name in filters:
-            category = cat
-            break
-    
-    coeffs = filter_patterns[filter_name]
-    
-    return {
-        'name': filter_name,
-        'category': category,
-        'coefficients': coeffs,
-        'order': len(coeffs) - 1,
-        'num_coefficients': len(coeffs),
-        'max_abs_coeff': max(abs(c) for c in coeffs),
-        'sum_coeffs': sum(coeffs)
-    }
+# =============================================================================
+# FILTER DESIGN 1: ORIGINAL UNIVERSAL FILTER
+# =============================================================================
+class UniversalSpectralFilter(nn.Module):
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        lowpass = get_filter_coefficients(init_filter_name, as_tensor=True)
+        coeffs_data = torch.zeros(filter_order + 1)
+        for i, val in enumerate(lowpass[:filter_order + 1]):
+            coeffs_data[i] = val
 
-def print_filter_summary():
-    """Print a summary of all available filters."""
-    print("Available Filter Patterns:")
-    print("=" * 50)
+        self.register_buffer('init_coeffs', coeffs_data.clone())
+        self.coeffs = nn.Parameter(coeffs_data.clone())
     
-    for category, filters in filter_categories.items():
-        print(f"\n{category.upper()} FILTERS:")
-        for filter_name in filters:
-            info = get_filter_info(filter_name)
-            print(f"  {filter_name:20} | Order: {info['order']:2} | Sum: {info['sum_coeffs']:8.4f}")
+    def forward(self, eigenvalues):
+        coeffs = self.coeffs
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        x = 2 * (eigenvalues / max_eigenval) - 1
+        
+        result = coeffs[0] * torch.ones_like(x)
+        
+        if len(coeffs) > 1:
+            T_prev, T_curr = torch.ones_like(x), x
+            result += coeffs[1] * T_curr
+            
+            for i in range(2, len(coeffs)):
+                T_next = 2 * x * T_curr - T_prev
+                result += coeffs[i] * T_next
+                T_prev, T_curr = T_curr, T_next
+        
+        filter_response = torch.exp(-torch.abs(result).clamp(max=10.0)) + 1e-6
+        return filter_response
 
-# Example usage function
-def example_usage():
-    """Demonstrate how to use the filter patterns."""
-    print("Filter Patterns Module - Usage Examples")
-    print("=" * 40)
+# =============================================================================
+# FILTER DESIGN 2: SPECTRAL BASIS FILTER
+# =============================================================================
+class SpectralBasisFilter(nn.Module):
+    """Learnable combination of proven filter patterns"""
     
-    # Get a specific filter
-    butterworth_coeffs = get_filter_coefficients('butterworth', as_tensor=True)
-    print(f"Butterworth coefficients: {butterworth_coeffs}")
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        filter_names = ['golden_036', 'smooth', 'butterworth', 'gaussian', 'bessel', 'conservative']
+        
+        self.filter_bank = []
+        for i, name in enumerate(filter_names):
+            coeffs = get_filter_coefficients(name, order=filter_order, as_tensor=True)
+            if len(coeffs) < filter_order + 1:
+                padded_coeffs = torch.zeros(filter_order + 1)
+                padded_coeffs[:len(coeffs)] = coeffs
+                coeffs = padded_coeffs
+            elif len(coeffs) > filter_order + 1:
+                coeffs = coeffs[:filter_order + 1]
+            
+            self.register_buffer(f'filter_{i}', coeffs)
+            self.filter_bank.append(getattr(self, f'filter_{i}'))
+        
+        init_weights = torch.ones(len(filter_names)) * 0.1
+        if init_filter_name in filter_names:
+            init_idx = filter_names.index(init_filter_name)
+            init_weights[init_idx] = 0.5
+        
+        self.mixing_weights = nn.Parameter(init_weights)
+        self.refinement_coeffs = nn.Parameter(torch.zeros(filter_order + 1))
+        self.refinement_scale = nn.Parameter(torch.tensor(0.1))
+        self.filter_names = filter_names
     
-    # Get filters by category
-    lowpass_filters = list_filters_by_category('lowpass')
-    print(f"Lowpass filters: {lowpass_filters}")
+    def forward(self, eigenvalues):
+        weights = torch.softmax(self.mixing_weights, dim=0)
+        
+        mixed_coeffs = torch.zeros_like(self.filter_bank[0])
+        for i, base_filter in enumerate(self.filter_bank):
+            mixed_coeffs += weights[i] * base_filter
+        
+        final_coeffs = mixed_coeffs + self.refinement_scale * self.refinement_coeffs
+        
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        x = 2 * (eigenvalues / max_eigenval) - 1
+        
+        result = final_coeffs[0] * torch.ones_like(x)
+        if len(final_coeffs) > 1:
+            T_prev, T_curr = torch.ones_like(x), x
+            result += final_coeffs[1] * T_curr
+            
+            for i in range(2, len(final_coeffs)):
+                T_next = 2 * x * T_curr - T_prev
+                result += final_coeffs[i] * T_next
+                T_prev, T_curr = T_curr, T_next
+        
+        return torch.exp(-torch.abs(result).clamp(max=10.0)) + 1e-6
     
-    # Get filter information
-    info = get_filter_info('gaussian')
-    print(f"Gaussian filter info: {info}")
-    
-    # Print summary
-    print_filter_summary()
+    def get_mixing_analysis(self):
+        weights = torch.softmax(self.mixing_weights, dim=0).detach().cpu().numpy()
+        analysis = {}
+        for i, name in enumerate(self.filter_names):
+            analysis[name] = weights[i]
+        return analysis
 
+# =============================================================================
+# FILTER DESIGN 3: ENHANCED SPECTRAL BASIS FILTER
+# =============================================================================
+class EnhancedSpectralBasisFilter(nn.Module):
+    """Enhanced basis filter for maximum performance"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        filter_names = [
+            'golden_036', 'soft_golden_ratio', 'golden_ratio_balanced', 'golden_optimized_1',
+            'smooth', 'butterworth', 'gaussian', 'bessel', 'conservative',
+            'fibonacci_soft', 'oscillatory_soft', 'soft_tuned_351', 'soft_tuned_352'
+        ]
+        
+        self.filter_bank = []
+        for i, name in enumerate(filter_names):
+            try:
+                coeffs = get_filter_coefficients(name, order=filter_order, as_tensor=True)
+                if len(coeffs) < filter_order + 1:
+                    padded_coeffs = torch.zeros(filter_order + 1)
+                    padded_coeffs[:len(coeffs)] = coeffs
+                    coeffs = padded_coeffs
+                elif len(coeffs) > filter_order + 1:
+                    coeffs = coeffs[:filter_order + 1]
+                
+                self.register_buffer(f'filter_{i}', coeffs)
+                self.filter_bank.append(getattr(self, f'filter_{i}'))
+            except:
+                continue
+        
+        init_weights = torch.ones(len(self.filter_bank)) * 0.02
+        
+        golden_filters = ['golden_036', 'soft_golden_ratio', 'golden_ratio_balanced', 'golden_optimized_1']
+        for i, name in enumerate(filter_names[:len(self.filter_bank)]):
+            if name == init_filter_name:
+                init_weights[i] = 0.4
+            elif name in golden_filters:
+                init_weights[i] = 0.15
+            elif name in ['smooth', 'butterworth']:
+                init_weights[i] = 0.08
+        
+        init_weights = init_weights / init_weights.sum()
+        
+        self.mixing_weights = nn.Parameter(init_weights)
+        self.refinement_coeffs = nn.Parameter(torch.zeros(filter_order + 1))
+        self.refinement_scale = nn.Parameter(torch.tensor(0.2))
+        self.transform_scale = nn.Parameter(torch.tensor(1.0))
+        self.transform_bias = nn.Parameter(torch.tensor(0.0))
+        
+        self.filter_names = filter_names[:len(self.filter_bank)]
+    
+    def forward(self, eigenvalues):
+        weights = torch.softmax(self.mixing_weights, dim=0)
+        
+        mixed_coeffs = torch.zeros_like(self.filter_bank[0])
+        for i, base_filter in enumerate(self.filter_bank):
+            mixed_coeffs += weights[i] * base_filter
+        
+        refinement = self.refinement_scale * torch.tanh(self.refinement_coeffs)
+        final_coeffs = mixed_coeffs + refinement
+        
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        x = 2 * (eigenvalues / max_eigenval) - 1
+        
+        result = final_coeffs[0] * torch.ones_like(x)
+        if len(final_coeffs) > 1:
+            T_prev, T_curr = torch.ones_like(x), x
+            result += final_coeffs[1] * T_curr
+            
+            for i in range(2, len(final_coeffs)):
+                T_next = 2 * x * T_curr - T_prev
+                result += final_coeffs[i] * T_next
+                T_prev, T_curr = T_curr, T_next
+        
+        result = self.transform_scale * result + self.transform_bias
+        
+        return torch.exp(-torch.abs(result).clamp(max=10.0)) + 1e-6
+    
+    def get_mixing_analysis(self):
+        weights = torch.softmax(self.mixing_weights, dim=0).detach().cpu().numpy()
+        analysis = {}
+        for i, name in enumerate(self.filter_names):
+            analysis[name] = weights[i]
+        
+        sorted_analysis = dict(sorted(analysis.items(), key=lambda x: x[1], reverse=True))
+        return sorted_analysis
+
+# =============================================================================
+# FILTER DESIGN 4: ADAPTIVE GOLDEN FILTER
+# =============================================================================
+class AdaptiveGoldenFilter(nn.Module):
+    """Learns adaptive variations of golden ratio patterns"""
+    
+    def __init__(self, filter_order=6, init_filter_name='golden_036'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        base_coeffs = get_filter_coefficients('golden_036', as_tensor=True)
+        if len(base_coeffs) < filter_order + 1:
+            padded_coeffs = torch.zeros(filter_order + 1)
+            padded_coeffs[:len(base_coeffs)] = base_coeffs
+            base_coeffs = padded_coeffs
+        elif len(base_coeffs) > filter_order + 1:
+            base_coeffs = base_coeffs[:filter_order + 1]
+        
+        self.register_buffer('base_coeffs', base_coeffs.clone())
+        
+        self.scale_factors = nn.Parameter(torch.ones(filter_order + 1))
+        self.bias_terms = nn.Parameter(torch.zeros(filter_order + 1) * 0.1)
+        self.golden_ratio_delta = nn.Parameter(torch.tensor(0.0))
+    
+    def forward(self, eigenvalues):
+        adaptive_ratio = 0.36 + 0.1 * torch.tanh(self.golden_ratio_delta)
+        
+        scale_constrained = 0.5 + 0.5 * torch.sigmoid(self.scale_factors)
+        bias_constrained = 0.1 * torch.tanh(self.bias_terms)
+        
+        adapted_coeffs = scale_constrained * self.base_coeffs + bias_constrained
+        adapted_coeffs = adapted_coeffs.clone()
+        adapted_coeffs[1] = -adaptive_ratio
+        
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        x = 2 * (eigenvalues / max_eigenval) - 1
+        
+        result = adapted_coeffs[0] * torch.ones_like(x)
+        if len(adapted_coeffs) > 1:
+            T_prev, T_curr = torch.ones_like(x), x
+            result += adapted_coeffs[1] * T_curr
+            
+            for i in range(2, len(adapted_coeffs)):
+                T_next = 2 * x * T_curr - T_prev
+                result += adapted_coeffs[i] * T_next
+                T_prev, T_curr = T_curr, T_next
+        
+        return torch.exp(-torch.abs(result).clamp(max=10.0)) + 1e-6
+
+# =============================================================================
+# FILTER DESIGN 5: EIGENVALUE ADAPTIVE FILTER
+# =============================================================================
+class EigenvalueAdaptiveFilter(nn.Module):
+    """Filter that adapts behavior based on eigenvalue magnitude"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        base_coeffs = get_filter_coefficients(init_filter_name, as_tensor=True)
+        if len(base_coeffs) < 3:
+            base_coeffs = torch.cat([base_coeffs, torch.zeros(3 - len(base_coeffs))])
+        
+        self.low_freq_coeffs = nn.Parameter(base_coeffs[:3].clone())
+        self.mid_freq_coeffs = nn.Parameter(base_coeffs[:3].clone())
+        self.high_freq_coeffs = nn.Parameter(base_coeffs[:3].clone())
+        
+        self.boundary_1 = nn.Parameter(torch.tensor(0.3))
+        self.boundary_2 = nn.Parameter(torch.tensor(0.7))
+        
+    def forward(self, eigenvalues):
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        norm_eigenvals = eigenvalues / max_eigenval
+        
+        low_response = self._compute_response(norm_eigenvals, self.low_freq_coeffs)
+        mid_response = self._compute_response(norm_eigenvals, self.mid_freq_coeffs)
+        high_response = self._compute_response(norm_eigenvals, self.high_freq_coeffs)
+        
+        boundary_1 = torch.sigmoid(self.boundary_1) * 0.5
+        boundary_2 = boundary_1 + torch.sigmoid(self.boundary_2) * 0.5
+        
+        weight_low = torch.sigmoid((boundary_1 - norm_eigenvals) * 10)
+        weight_high = torch.sigmoid((norm_eigenvals - boundary_2) * 10)
+        weight_mid = torch.clamp(1 - weight_low - weight_high, min=0.0)
+        
+        final_response = (weight_low * low_response + 
+                         weight_mid * mid_response + 
+                         weight_high * high_response)
+        
+        return torch.clamp(final_response, min=1e-6, max=1.0)
+    
+    def _compute_response(self, eigenvals, coeffs):
+        result = coeffs[0] + coeffs[1] * eigenvals + coeffs[2] * eigenvals**2
+        return torch.exp(-torch.abs(result).clamp(max=8.0)) + 1e-6
+
+# =============================================================================
+# FILTER DESIGN 6: NEURAL SPECTRAL FILTER
+# =============================================================================
+class NeuralSpectralFilter(nn.Module):
+    """Neural network for spectral response learning"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        self.filter_net = nn.Sequential(
+            nn.Linear(1, 16),
+            nn.ReLU(),
+            nn.Linear(16, 16), 
+            nn.ReLU(),
+            nn.Linear(16, 1),
+            nn.Sigmoid()
+        )
+        
+        with torch.no_grad():
+            self.filter_net[-2].weight.normal_(0, 0.1)
+            self.filter_net[-2].bias.fill_(-1.0)
+        
+    def forward(self, eigenvalues):
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        norm_eigenvals = (eigenvalues / max_eigenval).unsqueeze(-1)
+        
+        filter_response = self.filter_net(norm_eigenvals).squeeze(-1)
+        
+        return filter_response + 1e-6
+
+# =============================================================================
+# NEW: HIGH-CAPACITY FILTER DESIGNS
+# =============================================================================
+
+class DeepSpectralFilter(nn.Module):
+    """Deep neural network for spectral response learning (~1000+ parameters)"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth', hidden_dims=[64, 32, 16]):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        layers = []
+        prev_dim = 1
+        
+        for hidden_dim in hidden_dims:
+            layers.extend([
+                nn.Linear(prev_dim, hidden_dim),
+                nn.LayerNorm(hidden_dim),
+                nn.ReLU(),
+                nn.Dropout(0.1)
+            ])
+            prev_dim = hidden_dim
+        
+        layers.append(nn.Linear(prev_dim, 1))
+        layers.append(nn.Sigmoid())
+        
+        self.filter_net = nn.Sequential(*layers)
+        self._initialize_network()
+    
+    def _initialize_network(self):
+        for module in self.filter_net:
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_normal_(module.weight, gain=0.1)
+                nn.init.constant_(module.bias, 0.0)
+        
+        final_layer = self.filter_net[-2]
+        nn.init.constant_(final_layer.bias, -1.0)
+    
+    def forward(self, eigenvalues):
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        norm_eigenvals = (eigenvalues / max_eigenval).unsqueeze(-1)
+        
+        filter_response = self.filter_net(norm_eigenvals).squeeze(-1)
+        return filter_response + 1e-6
+
+class MultiScaleSpectralFilter(nn.Module):
+    """Multi-scale spectral filtering with learnable frequency bands (~500+ parameters)"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth', n_bands=8):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        self.n_bands = n_bands
+        
+        init_boundaries = torch.linspace(0, 1, n_bands + 1)[1:-1]
+        self.band_boundaries = nn.Parameter(init_boundaries)
+        self.band_responses = nn.Parameter(torch.ones(n_bands) * 0.5)
+        self.transition_sharpness = nn.Parameter(torch.tensor(10.0))
+        
+        self.modulation_net = nn.Sequential(
+            nn.Linear(1, 32),
+            nn.ReLU(),
+            nn.Linear(32, 16),
+            nn.ReLU(),
+            nn.Linear(16, 1),
+            nn.Tanh()
+        )
+        
+        self.modulation_strength = nn.Parameter(torch.tensor(0.1))
+    
+    def forward(self, eigenvalues):
+        max_eigenval = torch.max(eigenvalues) + 1e-8
+        norm_eigenvals = eigenvalues / max_eigenval
+        
+        sorted_boundaries = torch.sort(self.band_boundaries)[0]
+        boundaries = torch.cat([torch.zeros(1, device=eigenvalues.device), 
+                               sorted_boundaries,
+                               torch.ones(1, device=eigenvalues.device)])
+        
+        sharpness = torch.abs(self.transition_sharpness) + 1.0
+        band_responses = torch.sigmoid(self.band_responses)
+        
+        response = torch.zeros_like(norm_eigenvals)
+        
+        for i in range(self.n_bands):
+            left_boundary = boundaries[i]
+            right_boundary = boundaries[i + 1]
+            
+            left_transition = torch.sigmoid(sharpness * (norm_eigenvals - left_boundary))
+            right_transition = torch.sigmoid(sharpness * (right_boundary - norm_eigenvals))
+            
+            band_membership = left_transition * right_transition
+            response += band_membership * band_responses[i]
+        
+        modulation_input = norm_eigenvals.unsqueeze(-1)
+        modulation = self.modulation_net(modulation_input).squeeze(-1)
+        modulation_scale = torch.sigmoid(self.modulation_strength)
+        
+        final_response = response + modulation_scale * modulation
+        
+        return torch.clamp(final_response, min=1e-6, max=1.0)
+
+class EnsembleSpectralFilter(nn.Module):
+    """Ensemble of different filter types with learned mixing (~2000+ parameters)"""
+    
+    def __init__(self, filter_order=6, init_filter_name='smooth'):
+        super().__init__()
+        self.filter_order = filter_order
+        self.init_filter_name = init_filter_name
+        
+        self.classical_filter = UniversalSpectralFilter(filter_order, init_filter_name)
+        self.deep_filter = DeepSpectralFilter(filter_order, init_filter_name, [32, 16])
+        self.multiscale_filter = MultiScaleSpectralFilter(filter_order, init_filter_name, 6)
+        
+        self.ensemble_logits = nn.Parameter(torch.ones(3))
+        self.ensemble_temperature = nn.Parameter(torch.tensor(1.0))
+        
+        self.meta_net = nn.Sequential(
+            nn.Linear(3, 16),
+            nn.ReLU(),
+            nn.Linear(16, 3),
+            nn.Tanh()
+        )
+    
+    def forward(self, eigenvalues):
+        classical_response = self.classical_filter(eigenvalues)
+        deep_response = self.deep_filter(eigenvalues)
+        multiscale_response = self.multiscale_filter(eigenvalues)
+        
+        eigenval_stats = torch.stack([
+            eigenvalues.mean(),
+            eigenvalues.std(),
+            eigenvalues.max()
+        ])
+        
+        meta_adjustments = self.meta_net(eigenval_stats)
+        adjusted_logits = self.ensemble_logits + 0.5 * meta_adjustments
+        
+        temperature = torch.abs(self.ensemble_temperature) + 0.1
+        ensemble_weights = torch.softmax(adjusted_logits / temperature, dim=0)
+        
+        final_response = (ensemble_weights[0] * classical_response +
+                         ensemble_weights[1] * deep_response +
+                         ensemble_weights[2] * multiscale_response)
+        
+        return final_response
+    
+    def get_ensemble_analysis(self):
+        with torch.no_grad():
+            weights = torch.softmax(self.ensemble_logits, dim=0)
+            return {
+                'classical': weights[0].item(),
+                'deep': weights[1].item(), 
+                'multiscale': weights[2].item(),
+                'temperature': torch.abs(self.ensemble_temperature).item()
+            }

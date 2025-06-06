@@ -14,8 +14,6 @@ from register import dataset
 import warnings
 warnings.filterwarnings("ignore", message="Can't initialize NVML")
 
-import numpy as np
-
 # Import appropriate model based on configuration
 if world.config['m_type'] == 'single':
     from model_single import UniversalSpectralCF
@@ -85,90 +83,3 @@ else:
     print(f"📊 Model learned spectral coefficients using {dataset.trainDataSize:,} training interactions")
     print(f"🎯 Best model selected using {dataset.valDataSize:,} validation interactions") 
     print(f"🏆 Final evaluation on {len(dataset.testDict):,} test users")
-
-# Usage examples and quick tests
-def quick_comparison_test():
-    """Quick test to compare different filter designs with same initialization"""
-    print(f"\n{'='*60}")
-    print("🚀 QUICK COMPARISON TEST")
-    print(f"{'='*60}")
-    
-    designs = ['original', 'basis']
-    init_filter = 'smooth'
-    
-    results = {}
-    
-    for design in designs:
-        print(f"\n🔧 Testing {design} filter with {init_filter} initialization...")
-        
-        config_copy = world.config.copy()
-        config_copy['filter_design'] = design
-        config_copy['init_filter'] = init_filter
-        config_copy['epochs'] = 50  # Shorter for quick test
-        config_copy['patience'] = 8
-        
-        # Create and train model
-        adj_mat = dataset.UserItemNet.tolil()
-        model = UniversalSpectralCF(adj_mat, config_copy)
-        trained_model, final_results = procedure.train_and_evaluate(dataset, model, config_copy)
-        
-        results[design] = final_results['ndcg'][0]
-        print(f"   Result: NDCG@20 = {final_results['ndcg'][0]:.6f}")
-    
-    print(f"\n📊 Comparison Results:")
-    for design, ndcg in results.items():
-        print(f"   {design:10}: {ndcg:.6f}")
-    
-    best_design = max(results.keys(), key=lambda k: results[k])
-    improvement = results[best_design] - min(results.values())
-    print(f"\n🏆 Best: {best_design} (improvement: +{improvement:.6f})")
-
-def initialization_test():
-    """Test same filter design with different initializations"""
-    print(f"\n{'='*60}")
-    print("🎯 INITIALIZATION ROBUSTNESS TEST")
-    print(f"{'='*60}")
-    
-    design = 'basis'  # Use basis filter for this test
-    initializations = ['smooth', 'golden_036', 'butterworth']
-    
-    results = {}
-    
-    for init in initializations:
-        print(f"\n🔧 Testing {design} filter with {init} initialization...")
-        
-        config_copy = world.config.copy()
-        config_copy['filter_design'] = design
-        config_copy['init_filter'] = init
-        config_copy['epochs'] = 50
-        config_copy['patience'] = 8
-        
-        # Create and train model
-        adj_mat = dataset.UserItemNet.tolil()
-        model = UniversalSpectralCF(adj_mat, config_copy)
-        trained_model, final_results = procedure.train_and_evaluate(dataset, model, config_copy)
-        
-        results[init] = final_results['ndcg'][0]
-        print(f"   Result: NDCG@20 = {final_results['ndcg'][0]:.6f}")
-    
-    print(f"\n📊 Initialization Results:")
-    ndcgs = list(results.values())
-    for init, ndcg in results.items():
-        print(f"   {init:12}: {ndcg:.6f}")
-    
-    gap = max(ndcgs) - min(ndcgs)
-    std_dev = np.std(ndcgs)
-    print(f"\n📈 Convergence Analysis:")
-    print(f"   Gap:     {gap:.6f}")
-    print(f"   Std Dev: {std_dev:.6f}")
-    
-    if gap < 0.01:
-        print(f"   ✅ Excellent convergence!")
-    elif gap < 0.02:
-        print(f"   🟢 Good convergence")
-    else:
-        print(f"   🟡 Room for improvement")
-
-# Uncomment to run quick tests
-# quick_comparison_test()
-# initialization_test()
