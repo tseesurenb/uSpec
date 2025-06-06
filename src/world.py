@@ -1,7 +1,7 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
-FIXED: Proper argument parsing for filter design options
+Updated with DySimGCF-style parameters for model_double
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -37,10 +37,17 @@ config['min_delta'] = args.min_delta
 config['n_epoch_eval'] = args.n_epoch_eval
 config['m_type'] = args.m_type
 
-# FIXED: Add the new filter design options
+# Filter design options
 config['filter_design'] = args.filter_design
 config['init_filter'] = args.init_filter
 config['run_convergence_test'] = args.run_convergence_test
+
+# DySimGCF-style parameters (for model_double)
+config['u_sim'] = args.u_sim
+config['i_sim'] = args.i_sim
+config['u_K'] = args.u_K
+config['i_K'] = args.i_K
+config['self_loop'] = args.self_loop
 
 # Backward compatibility (optional)
 config['u_batch'] = args.train_u_batch_size  # Alias for old code

@@ -1,7 +1,7 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
-DySimGCF-Style Implementation with Similarity-Based Graph Construction
+DySimGCF-Style Implementation with True Similarity-Based Graph Construction
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -11,6 +11,7 @@ import torch.nn as nn
 import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import eigsh
+from sklearn.metrics.pairwise import cosine_similarity
 import time
 import gc
 import world
@@ -20,7 +21,7 @@ import filters as fl
 class UniversalSpectralCF(nn.Module):
     """
     Universal Spectral CF with DySimGCF-Style Similarity-Based Graph Construction
-    Enhanced with multiple filter designs from filters.py
+    Uses the same similarity computation approach as DySimGCF but applies spectral filtering
     """
     def __init__(self, adj_mat, config=None):
         super().__init__()
@@ -33,19 +34,21 @@ class UniversalSpectralCF(nn.Module):
         self.lr = self.config.get('lr', 0.01)
         self.filter = self.config.get('filter', 'ui')
         
-        # DySimGCF-style parameters
-        self.k_users = self.config.get('k_users', 50)      # Top-K similar users
-        self.k_items = self.config.get('k_items', 20)      # Top-K similar items
-        self.similarity_type = self.config.get('similarity_type', 'cosine')
+        # DySimGCF-style parameters (matching their configuration)
+        self.u_sim = self.config.get('u_sim', 'cos')           # 'cos' or 'jac'
+        self.i_sim = self.config.get('i_sim', 'cos')           # 'cos' or 'jac'
+        self.u_K = self.config.get('u_K', 80)                 # Top-K users (DySimGCF default)
+        self.i_K = self.config.get('i_K', 10)                 # Top-K items (DySimGCF default)
+        self.self_loop = self.config.get('self_loop', False)   # Self-loops in similarity
         
-        # Filter design selection with new high-capacity options
+        # Filter design selection
         self.filter_design = self.config.get('filter_design', 'basis')
         self.init_filter = self.config.get('init_filter', 'smooth')
         
         print(f"Model Double (DySimGCF-Style) - Filter Design: {self.filter_design}")
         print(f"Model Double (DySimGCF-Style) - Initialization: {self.init_filter}")
-        print(f"Model Double (DySimGCF-Style) - Top-K Users: {self.k_users}, Items: {self.k_items}")
-        print(f"Model Double (DySimGCF-Style) - Similarity: {self.similarity_type}")
+        print(f"Model Double (DySimGCF-Style) - User Sim: {self.u_sim} (K={self.u_K}), Item Sim: {self.i_sim} (K={self.i_K})")
+        print(f"Model Double (DySimGCF-Style) - Self-loop: {self.self_loop}")
         
         # Convert to tensor
         if sp.issparse(self.adj_mat):
@@ -56,8 +59,8 @@ class UniversalSpectralCF(nn.Module):
         self.register_buffer('adj_tensor', torch.tensor(adj_dense, dtype=torch.float32))
         self.n_users, self.n_items = self.adj_tensor.shape
         
-        # Create DySimGCF-style similarity-based adjacency matrices
-        self._create_similarity_based_adjacencies()
+        # Create DySimGCF-style similarity matrices using their exact approach
+        self._create_dysimgcf_similarity_matrices()
         
         # Filter modules (will be set in _initialize_model)
         self.user_filter = None
@@ -76,90 +79,198 @@ class UniversalSpectralCF(nn.Module):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
     
-    def _compute_similarity_matrix(self, interaction_matrix, sim_type='cosine'):
-        """Compute similarity matrix using cosine or jaccard similarity"""
+    def _dysimgcf_cosine_similarity(self, matrix, top_k, self_loop=False):
+        """
+        DySimGCF-style cosine similarity computation
+        Replicates the exact approach from i_sim.py
+        """
+        print(f"  Computing DySimGCF cosine similarity (top-K={top_k})...")
         
-        if sim_type == 'cosine':
-            # Cosine similarity: normalized dot product
-            norms = torch.norm(interaction_matrix, dim=1, keepdim=True) + 1e-8
-            normalized = interaction_matrix / norms
-            similarity = normalized @ normalized.t()
-            
-        elif sim_type == 'jaccard':
-            # Jaccard similarity: intersection over union
-            binary_matrix = (interaction_matrix > 0).float()
-            intersection = binary_matrix @ binary_matrix.t()
-            
-            # Union = |A| + |B| - |A ∩ B|
-            row_sums = binary_matrix.sum(dim=1, keepdim=True)
-            union = row_sums + row_sums.t() - intersection
-            similarity = intersection / (union + 1e-8)
-            
+        # Convert to sparse matrix for DySimGCF compatibility
+        from scipy.sparse import csr_matrix
+        
+        # Convert to binary sparse matrix (DySimGCF approach)
+        binary_matrix = csr_matrix((matrix > 0).astype(int))
+        
+        # Compute cosine similarity - force sparse output
+        try:
+            similarity_matrix = cosine_similarity(binary_matrix, dense_output=False)
+        except:
+            # Fallback: compute dense then convert to sparse
+            similarity_dense = cosine_similarity(binary_matrix.toarray())
+            similarity_matrix = csr_matrix(similarity_dense)
+        
+        # Handle different return types from sklearn
+        if hasattr(similarity_matrix, 'setdiag'):
+            # It's a sparse matrix
+            if self_loop:
+                similarity_matrix.setdiag(1)
+            else:
+                similarity_matrix.setdiag(0)
         else:
-            raise ValueError(f"Unknown similarity type: {sim_type}")
+            # It's a dense array, convert to sparse
+            if not self_loop:
+                np.fill_diagonal(similarity_matrix, 0)
+            else:
+                np.fill_diagonal(similarity_matrix, 1)
+            similarity_matrix = csr_matrix(similarity_matrix)
         
-        return similarity
-    
-    def _create_top_k_adjacency(self, similarity_matrix, k):
-        """Create top-K adjacency matrix from similarity scores"""
-        n = similarity_matrix.shape[0]
+        # DySimGCF-style top-K filtering
+        filtered_data = []
+        filtered_rows = []
+        filtered_cols = []
         
-        # Get top-K similar items for each node (excluding self-similarity)
-        k_actual = min(k + 1, n)  # +1 to account for self-similarity
-        top_k_values, top_k_indices = torch.topk(similarity_matrix, k=k_actual, dim=1)
-        
-        # Create sparse adjacency matrix with only top-K connections
-        adj_matrix = torch.zeros_like(similarity_matrix)
-        
-        for i in range(n):
-            # Exclude self-similarity (diagonal elements)
-            mask = top_k_indices[i] != i
-            valid_indices = top_k_indices[i][mask][:k]  # Take top-k excluding self
-            valid_values = top_k_values[i][mask][:k]
+        for i in range(similarity_matrix.shape[0]):
+            # Get the non-zero elements in the i-th row
+            if hasattr(similarity_matrix, 'getrow'):
+                row = similarity_matrix.getrow(i).tocoo()
+                if row.nnz == 0:
+                    continue
+                row_data = row.data
+                row_indices = row.col
+            else:
+                # Handle dense case
+                row_data = similarity_matrix[i]
+                nonzero_mask = row_data != 0
+                if not np.any(nonzero_mask):
+                    continue
+                row_data = row_data[nonzero_mask]
+                row_indices = np.where(nonzero_mask)[0]
             
-            if len(valid_indices) > 0:
-                adj_matrix[i, valid_indices] = valid_values
+            # Sort and select top-K (DySimGCF approach)
+            if len(row_data) > top_k:
+                top_k_idx = np.argsort(-row_data)[:top_k]
+            else:
+                top_k_idx = np.argsort(-row_data)
+            
+            # Store the top-K similarities
+            filtered_data.extend(row_data[top_k_idx])
+            filtered_rows.extend([i] * len(top_k_idx))
+            filtered_cols.extend(row_indices[top_k_idx])
         
-        # Make symmetric (important for spectral methods)
-        adj_matrix = (adj_matrix + adj_matrix.t()) / 2
+        # Create filtered sparse matrix
+        from scipy.sparse import coo_matrix
+        filtered_similarity_matrix = coo_matrix(
+            (filtered_data, (filtered_rows, filtered_cols)), 
+            shape=similarity_matrix.shape
+        )
         
-        return adj_matrix
+        return filtered_similarity_matrix.tocsr()
     
-    def _create_similarity_based_adjacencies(self):
-        """Create DySimGCF-style similarity-based adjacency matrices"""
+    def _dysimgcf_jaccard_similarity(self, matrix, top_k, self_loop=False):
+        """
+        DySimGCF-style Jaccard similarity computation
+        Replicates the exact approach from i_sim.py
+        """
+        print(f"  Computing DySimGCF Jaccard similarity (top-K={top_k})...")
         
-        print("Creating DySimGCF-style similarity-based adjacency matrices...")
+        # Convert to sparse matrix for efficiency
+        from scipy.sparse import csr_matrix
         
-        # User-user similarity
-        print(f"  Computing user-user {self.similarity_type} similarity...")
-        user_similarity = self._compute_similarity_matrix(self.adj_tensor, self.similarity_type)
-        user_adj = self._create_top_k_adjacency(user_similarity, self.k_users)
+        # Convert to binary matrix (ensure sparse)
+        if not sp.issparse(matrix):
+            binary_matrix = csr_matrix((matrix > 0).astype(int))
+        else:
+            binary_matrix = csr_matrix((matrix > 0).astype(int))
         
-        # Normalize user adjacency
-        user_row_sums = user_adj.sum(dim=1, keepdim=True) + 1e-8
-        user_col_sums = user_adj.sum(dim=0, keepdim=True) + 1e-8
+        # Compute intersection using dot product (DySimGCF approach)
+        intersection = binary_matrix.dot(binary_matrix.T)
+        
+        # Compute row sums
+        row_sums = np.array(binary_matrix.sum(axis=1)).flatten()
+        
+        # Compute union - convert intersection to dense for computation
+        intersection_dense = intersection.toarray().astype(np.float32)
+        union = row_sums[:, None] + row_sums[None, :] - intersection_dense
+        
+        # Compute Jaccard similarity
+        similarity_matrix = np.divide(
+            intersection_dense, union, 
+            out=np.zeros_like(intersection_dense, dtype=np.float32), 
+            where=union != 0
+        )
+        
+        # Handle self-loops
+        if self_loop:
+            np.fill_diagonal(similarity_matrix, 1)
+        else:
+            np.fill_diagonal(similarity_matrix, 0)
+        
+        # DySimGCF-style top-K filtering
+        filtered_data = []
+        filtered_rows = []
+        filtered_cols = []
+        
+        for i in range(similarity_matrix.shape[0]):
+            row = similarity_matrix[i]
+            if np.count_nonzero(row) == 0:
+                continue
+            
+            # Sort and select top-K
+            top_k_idx = np.argsort(-row)[:top_k]
+            
+            # Store the top-K similarities
+            filtered_data.extend(row[top_k_idx])
+            filtered_rows.extend([i] * len(top_k_idx))
+            filtered_cols.extend(top_k_idx)
+        
+        # Create filtered sparse matrix
+        from scipy.sparse import coo_matrix
+        filtered_similarity_matrix = coo_matrix(
+            (filtered_data, (filtered_rows, filtered_cols)), 
+            shape=similarity_matrix.shape
+        )
+        
+        return filtered_similarity_matrix.tocsr()
+    
+    def _create_dysimgcf_similarity_matrices(self):
+        """
+        Create DySimGCF-style similarity matrices - keep them separate for efficiency
+        """
+        print("Creating DySimGCF-style similarity matrices...")
+        
+        # Convert to numpy for similarity computation (DySimGCF approach)
+        user_item_matrix = self.adj_tensor.cpu().numpy()
+        
+        # User-user similarity using DySimGCF approach
+        print(f"  User-user similarity ({self.u_sim})...")
+        if self.u_sim == 'cos':
+            user_similarity_matrix = self._dysimgcf_cosine_similarity(
+                user_item_matrix, self.u_K, self.self_loop
+            )
+        elif self.u_sim == 'jac':
+            user_similarity_matrix = self._dysimgcf_jaccard_similarity(
+                user_item_matrix, self.u_K, self.self_loop
+            )
+        else:
+            raise ValueError(f"Unsupported user similarity type: {self.u_sim}")
+        
+        # Item-item similarity using DySimGCF approach
+        print(f"  Item-item similarity ({self.i_sim})...")
+        if self.i_sim == 'cos':
+            item_similarity_matrix = self._dysimgcf_cosine_similarity(
+                user_item_matrix.T, self.i_K, self.self_loop
+            )
+        elif self.i_sim == 'jac':
+            item_similarity_matrix = self._dysimgcf_jaccard_similarity(
+                user_item_matrix.T, self.i_K, self.self_loop
+            )
+        else:
+            raise ValueError(f"Unsupported item similarity type: {self.i_sim}")
+        
+        print(f"    User similarity: {user_similarity_matrix.nnz} edges, "
+              f"avg degree: {user_similarity_matrix.nnz / self.n_users:.1f}")
+        print(f"    Item similarity: {item_similarity_matrix.nnz} edges, "
+              f"avg degree: {item_similarity_matrix.nnz / self.n_items:.1f}")
+        
+        # Store similarity matrices separately (more memory efficient)
         self.register_buffer('user_sim_adj', 
-                           user_adj / torch.sqrt(user_row_sums) / torch.sqrt(user_col_sums))
-        
-        print(f"    User adjacency: {(user_adj > 0).sum().item():.0f} edges, "
-              f"avg degree: {(user_adj > 0).sum().item() / self.n_users:.1f}")
-        
-        # Item-item similarity  
-        print(f"  Computing item-item {self.similarity_type} similarity...")
-        item_similarity = self._compute_similarity_matrix(self.adj_tensor.t(), self.similarity_type)
-        item_adj = self._create_top_k_adjacency(item_similarity, self.k_items)
-        
-        # Normalize item adjacency
-        item_row_sums = item_adj.sum(dim=1, keepdim=True) + 1e-8
-        item_col_sums = item_adj.sum(dim=0, keepdim=True) + 1e-8
-        self.register_buffer('item_sim_adj',
-                           item_adj / torch.sqrt(item_row_sums) / torch.sqrt(item_col_sums))
-        
-        print(f"    Item adjacency: {(item_adj > 0).sum().item():.0f} edges, "
-              f"avg degree: {(item_adj > 0).sum().item() / self.n_items:.1f}")
+                           torch.tensor(user_similarity_matrix.toarray(), dtype=torch.float32))
+        self.register_buffer('item_sim_adj', 
+                           torch.tensor(item_similarity_matrix.toarray(), dtype=torch.float32))
         
         # Clean up
-        del user_similarity, item_similarity, user_adj, item_adj
+        del user_item_matrix, user_similarity_matrix, item_similarity_matrix
         self._memory_cleanup()
     
     def _create_filter_from_design(self):
@@ -210,16 +321,12 @@ class UniversalSpectralCF(nn.Module):
         
         print(f"Computing DySimGCF-style eigendecompositions for filter type: {self.filter}")
         
-        # User eigendecomposition (on similarity-based adjacency)
+        # User eigendecomposition (on DySimGCF similarity matrix)
         if self.filter in ['u', 'ui']:
-            print("Processing user similarity-based adjacency...")
+            print("Processing user DySimGCF similarity matrix...")
             
-            # Compute user similarity matrix using the precomputed adjacency
-            user_sim_matrix = self._compute_similarity_chunked(
-                self.user_sim_adj, self.user_sim_adj.t(), chunk_size=1000
-            )
-            
-            user_sim_np = user_sim_matrix.cpu().numpy()
+            # Use the precomputed DySimGCF similarity matrix directly
+            user_sim_np = self.user_sim_adj.cpu().numpy()
             k_user = min(self.n_eigen, self.n_users - 2)
             
             try:
@@ -236,19 +343,15 @@ class UniversalSpectralCF(nn.Module):
                 self.register_buffer('user_eigenvecs', torch.eye(self.n_users, k_user))
                 self.user_filter = self._create_filter_from_design()
             
-            del user_sim_matrix, user_sim_np
+            del user_sim_np
             self._memory_cleanup()
         
-        # Item eigendecomposition (on similarity-based adjacency)
+        # Item eigendecomposition (on DySimGCF similarity matrix)
         if self.filter in ['i', 'ui']:
-            print("Processing item similarity-based adjacency...")
+            print("Processing item DySimGCF similarity matrix...")
             
-            # Compute item similarity matrix using the precomputed adjacency
-            item_sim_matrix = self._compute_similarity_chunked(
-                self.item_sim_adj, self.item_sim_adj.t(), chunk_size=1000
-            )
-            
-            item_sim_np = item_sim_matrix.cpu().numpy()
+            # Use the precomputed DySimGCF similarity matrix directly
+            item_sim_np = self.item_sim_adj.cpu().numpy()
             k_item = min(self.n_eigen, self.n_items - 2)
             
             try:
@@ -265,7 +368,7 @@ class UniversalSpectralCF(nn.Module):
                 self.register_buffer('item_eigenvecs', torch.eye(self.n_items, k_item))
                 self.item_filter = self._create_filter_from_design()
             
-            del item_sim_matrix, item_sim_np
+            del item_sim_np
             self._memory_cleanup()
         
         # Set combination weights as nn.Parameter (trainable)
@@ -283,7 +386,7 @@ class UniversalSpectralCF(nn.Module):
         print(f'DySimGCF-style initialization time for Universal-SpectralCF ({self.filter}): {end-start:.2f}s')
     
     def _get_filter_matrices(self):
-        """Compute filter matrices for similarity-based adjacencies"""
+        """Compute filter matrices for DySimGCF similarity-based adjacencies"""
         user_matrix = None
         item_matrix = None
         
@@ -372,15 +475,15 @@ class UniversalSpectralCF(nn.Module):
     def debug_filter_learning(self):
         """Enhanced debug for different filter designs with DySimGCF-style similarities"""
         print(f"\n=== FILTER LEARNING DEBUG (DYSIMGCF-STYLE) - {self.filter_design.upper()} ===")
-        print(f"Similarity: {self.similarity_type}, Top-K Users: {self.k_users}, Items: {self.k_items}")
+        print(f"User Sim: {self.u_sim} (K={self.u_K}), Item Sim: {self.i_sim} (K={self.i_K}), Self-loop: {self.self_loop}")
         
         with torch.no_grad():
             if self.filter in ['u', 'ui'] and self.user_filter is not None:
-                print(f"\n👤 User Similarity Filter ({self.filter_design}):")
+                print(f"\n👤 User DySimGCF Filter ({self.filter_design}):")
                 self._debug_single_filter(self.user_filter, "User")
             
             if self.filter in ['i', 'ui'] and self.item_filter is not None:
-                print(f"\n🎬 Item Similarity Filter ({self.filter_design}):")
+                print(f"\n🎬 Item DySimGCF Filter ({self.filter_design}):")
                 self._debug_single_filter(self.item_filter, "Item")
             
             # Combination weights

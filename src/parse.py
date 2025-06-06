@@ -1,7 +1,7 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
-Enhanced argument parser with high-capacity filter design options
+Enhanced argument parser with DySimGCF-style parameters for model_double
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('--decay', type=float, default=1e-2, help="the weight decay for l2 normalizaton")
     parser.add_argument('--train_u_batch_size', type=int, default=1000, help='batch size for training users, -1 for full dataset')
     parser.add_argument('--eval_u_batch_size', type=int, default=500, help="batch size for evaluation users (memory management)")
-    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--epochs', type=int, default=200)
     
     # Dataset and evaluation
     parser.add_argument('--dataset', type=str, default='gowalla', help="available datasets: [lastfm, gowalla, yelp2018, amazon-book, ml-100k]")
@@ -25,21 +25,28 @@ def parse_args():
     parser.add_argument('--val_ratio', type=float, default=0.1, help='ratio of training data to use for validation (0.1 = 10%)')
     
     # Model architecture
-    parser.add_argument('--n_eigen', type=int, default=500)
+    parser.add_argument('--n_eigen', type=int, default=30)
     parser.add_argument('--model', type=str, default='uspec', help='rec-model, support [uspec]')
     parser.add_argument('--m_type', type=str, default='single', help='single or double similarity')
     parser.add_argument('--filter', type=str, default='u', help='u, i, or ui')
-    parser.add_argument('--filter_order', type=int, default=6, help='polynomial order for spectral filters')
+    parser.add_argument('--filter_order', type=int, default=5, help='polynomial order for spectral filters')
     
-    # UPDATED: Filter design options with new high-capacity filters
+    # Filter design options
     parser.add_argument('--filter_design', type=str, default='basis', 
                        choices=['original', 'basis', 'enhanced_basis', 'adaptive_golden', 'adaptive', 'neural', 'deep', 'multiscale', 'ensemble'],
                        help='Filter design: original (polynomial), basis (combination), enhanced_basis (performance-optimized), adaptive_golden (golden ratio variants), adaptive (eigenvalue-dependent), neural (MLP), deep (deep neural network), multiscale (multi-scale frequency bands), ensemble (ensemble of filter types)')
     parser.add_argument('--init_filter', type=str, default='smooth',
                        help='Initial filter pattern from filters.py (e.g., smooth, golden_036, butterworth)')
     
+    # DySimGCF-style parameters (for model_double)
+    parser.add_argument('--u_sim', type=str, default='cos', help='User similarity: cos (cosine) or jac (jaccard)')
+    parser.add_argument('--i_sim', type=str, default='cos', help='Item similarity: cos (cosine) or jac (jaccard)')
+    parser.add_argument('--u_K', type=int, default=50, help='Top-K users for user similarity (DySimGCF default)')
+    parser.add_argument('--i_K', type=int, default=20, help='Top-K items for item similarity (DySimGCF default)')
+    parser.add_argument('--self_loop', action='store_true', help='Include self-loops in similarity matrices')
+    
     # Training control
-    parser.add_argument('--patience', type=int, default=5, help='early stopping patience')
+    parser.add_argument('--patience', type=int, default=20, help='early stopping patience')
     parser.add_argument('--min_delta', type=float, default=1e-5, help='minimum improvement for early stopping')
     parser.add_argument('--n_epoch_eval', type=int, default=5, help='evaluate every N epochs')
     
@@ -53,9 +60,9 @@ def parse_args():
 
 # Add validation for filter design combinations
 def validate_args(args):
-    """Validate argument combinations (UPDATED with new filters)"""
+    """Validate argument combinations with DySimGCF parameters"""
     
-    # UPDATED: Check if init_filter exists (expanded list)
+    # Check if init_filter exists
     valid_init_filters = [
         # Core smoothing filters
         'smooth', 'butterworth', 'gaussian', 'bessel', 'conservative',
@@ -79,12 +86,39 @@ def validate_args(args):
         print(f"Warning: init_filter '{args.init_filter}' may not exist in filters.py")
         print(f"Valid options include: {valid_init_filters[:8]}...")
     
+    # Validate similarity types
+    if args.u_sim not in ['cos', 'jac']:
+        print(f"Warning: u_sim '{args.u_sim}' should be 'cos' or 'jac'")
+    
+    if args.i_sim not in ['cos', 'jac']:
+        print(f"Warning: i_sim '{args.i_sim}' should be 'cos' or 'jac'")
+    
+    # DySimGCF-style parameter recommendations
+    if args.m_type == 'double':
+        print(f"🔄 DOUBLE MODE (DySimGCF-Style):")
+        print(f"   User similarity: {args.u_sim} (K={args.u_K})")
+        print(f"   Item similarity: {args.i_sim} (K={args.i_K})")
+        print(f"   Self-loops: {args.self_loop}")
+        
+        # Dataset-specific recommendations for DySimGCF parameters
+        if args.dataset == 'ml-100k':
+            if args.u_K != 80 or args.i_K != 10:
+                print(f"💡 TIP: For {args.dataset}, DySimGCF uses u_K=80, i_K=10")
+        elif args.dataset == 'yelp2018':
+            if args.u_K != 50 or args.i_K != 20:
+                print(f"💡 TIP: For {args.dataset}, DySimGCF uses u_K=50, i_K=20")
+        elif args.dataset == 'amazon_book':
+            if args.u_K != 40 or args.i_K != 5:
+                print(f"💡 TIP: For {args.dataset}, DySimGCF uses u_K=40, i_K=5")
+    else:
+        print(f"🔄 SINGLE MODE: Standard similarity approach")
+    
     # Adjust epochs for convergence test
     if args.run_convergence_test and args.epochs < 30:
         print(f"Note: Convergence test recommended with epochs >= 30, setting to 30")
         args.epochs = 30
     
-    # UPDATED: Recommend settings for different filter designs (including new ones)
+    # Filter design recommendations
     design_info = {
         'original': "🔧 ORIGINAL - Direct polynomial learning, may need higher epochs",
         'basis': "📋 BASIS - Recommended for best convergence and performance balance",
@@ -100,13 +134,13 @@ def validate_args(args):
     if args.filter_design in design_info:
         print(design_info[args.filter_design])
     
-    # UPDATED: Parameter capacity warnings and recommendations
+    # Parameter capacity warnings and recommendations
     high_capacity_designs = ['deep', 'multiscale', 'ensemble']
     if args.filter_design in high_capacity_designs:
         print(f"⚠️  HIGH-CAPACITY FILTER: {args.filter_design}")
         print(f"   - Training may take longer")
         print(f"   - Consider reducing epochs if needed")
-        print(f"   - Recommended for larger datasets (ml-1m, amazon-book)")
+        print(f"   - Recommended for larger datasets")
         
         # Adjust batch sizes for high-capacity filters
         if args.train_u_batch_size > 1000:
@@ -200,12 +234,9 @@ def print_filter_design_help():
     print("  🏆 For max performance: 'ensemble' (large datasets)")
     print("  🧪 For experimentation: 'deep' or 'multiscale'")
     print("="*80)
-
-# if __name__ == "__main__":
-#     args = parse_args()
     
-#     if len(sys.argv) == 1:  # No arguments provided
-#         print_filter_design_help()
-#     else:
-#         args = validate_args(args)
-#         print("Parsed arguments:", args)
+    print("\n" + "="*80)
+    print("🔄 MODEL TYPES:")
+    print("  SINGLE: Standard similarity (like LightGCN)")
+    print("  DOUBLE: DySimGCF-style user-user + item-item similarities")
+    print("="*80)
