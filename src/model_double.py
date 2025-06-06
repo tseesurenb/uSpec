@@ -1,7 +1,10 @@
-"""
-DySimGCF-Inspired Universal Spectral CF
-Integrating similarity-based graph construction with closed-form spectral filtering
-"""
+'''
+Created on June 3, 2025
+PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
+DySimGCF-Style Implementation with Similarity-Based Graph Construction
+
+@author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
+'''
 
 import torch
 import torch.nn as nn
@@ -9,13 +12,16 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import eigsh
 import time
+import gc
+import world
+import filters as fl
+
 
 class UniversalSpectralCF(nn.Module):
     """
-    Universal Spectral CF inspired by DySimGCF's similarity-based graph construction
-    Maintains closed-form property while using more principled adjacency matrices
+    Universal Spectral CF with DySimGCF-Style Similarity-Based Graph Construction
+    Enhanced with multiple filter designs from filters.py
     """
-    
     def __init__(self, adj_mat, config=None):
         super().__init__()
         
@@ -24,21 +30,22 @@ class UniversalSpectralCF(nn.Module):
         self.device = self.config.get('device', 'cpu')
         self.n_eigen = self.config.get('n_eigen', 50)
         self.filter_order = self.config.get('filter_order', 6)
+        self.lr = self.config.get('lr', 0.01)
         self.filter = self.config.get('filter', 'ui')
         
-        # DySimGCF-inspired parameters
-        self.k_users = self.config.get('k_users', 250)      # Top-K similar users
-        self.k_items = self.config.get('k_items', 50)      # Top-K similar items
+        # DySimGCF-style parameters
+        self.k_users = self.config.get('k_users', 50)      # Top-K similar users
+        self.k_items = self.config.get('k_items', 20)      # Top-K similar items
         self.similarity_type = self.config.get('similarity_type', 'cosine')
         
         # Filter design selection with new high-capacity options
         self.filter_design = self.config.get('filter_design', 'basis')
         self.init_filter = self.config.get('init_filter', 'smooth')
         
-        print(f"Model Double - Filter Design: {self.filter_design}")
-        print(f"Model Double - Initialization: {self.init_filter}")
-        print(f"Model Double - DySimGCF Top-K Users: {self.k_users}, Items: {self.k_items}")
-        print(f"Model Double - Similarity: {self.similarity_type}")
+        print(f"Model Double (DySimGCF-Style) - Filter Design: {self.filter_design}")
+        print(f"Model Double (DySimGCF-Style) - Initialization: {self.init_filter}")
+        print(f"Model Double (DySimGCF-Style) - Top-K Users: {self.k_users}, Items: {self.k_items}")
+        print(f"Model Double (DySimGCF-Style) - Similarity: {self.similarity_type}")
         
         # Convert to tensor
         if sp.issparse(self.adj_mat):
@@ -49,14 +56,12 @@ class UniversalSpectralCF(nn.Module):
         self.register_buffer('adj_tensor', torch.tensor(adj_dense, dtype=torch.float32))
         self.n_users, self.n_items = self.adj_tensor.shape
         
-        # Create DySimGCF-inspired similarity-based adjacency matrices
+        # Create DySimGCF-style similarity-based adjacency matrices
         self._create_similarity_based_adjacencies()
         
-        # Enhanced filter modules (will be set in _initialize_model)
-        self.user_pos_filter = None
-        self.user_neg_filter = None
-        self.item_pos_filter = None
-        self.item_neg_filter = None
+        # Filter modules (will be set in _initialize_model)
+        self.user_filter = None
+        self.item_filter = None
         
         # Clean up intermediate variables
         del adj_dense
@@ -67,7 +72,6 @@ class UniversalSpectralCF(nn.Module):
     
     def _memory_cleanup(self):
         """Force memory cleanup"""
-        import gc
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -100,14 +104,21 @@ class UniversalSpectralCF(nn.Module):
         """Create top-K adjacency matrix from similarity scores"""
         n = similarity_matrix.shape[0]
         
-        # Get top-K similar items for each node
-        top_k_values, top_k_indices = torch.topk(similarity_matrix, k=min(k, n-1), dim=1)
+        # Get top-K similar items for each node (excluding self-similarity)
+        k_actual = min(k + 1, n)  # +1 to account for self-similarity
+        top_k_values, top_k_indices = torch.topk(similarity_matrix, k=k_actual, dim=1)
         
         # Create sparse adjacency matrix with only top-K connections
         adj_matrix = torch.zeros_like(similarity_matrix)
         
         for i in range(n):
-            adj_matrix[i, top_k_indices[i]] = top_k_values[i]
+            # Exclude self-similarity (diagonal elements)
+            mask = top_k_indices[i] != i
+            valid_indices = top_k_indices[i][mask][:k]  # Take top-k excluding self
+            valid_values = top_k_values[i][mask][:k]
+            
+            if len(valid_indices) > 0:
+                adj_matrix[i, valid_indices] = valid_values
         
         # Make symmetric (important for spectral methods)
         adj_matrix = (adj_matrix + adj_matrix.t()) / 2
@@ -115,9 +126,9 @@ class UniversalSpectralCF(nn.Module):
         return adj_matrix
     
     def _create_similarity_based_adjacencies(self):
-        """Create DySimGCF-inspired similarity-based adjacency matrices"""
+        """Create DySimGCF-style similarity-based adjacency matrices"""
         
-        print("Creating similarity-based adjacency matrices...")
+        print("Creating DySimGCF-style similarity-based adjacency matrices...")
         
         # User-user similarity
         print(f"  Computing user-user {self.similarity_type} similarity...")
@@ -130,7 +141,8 @@ class UniversalSpectralCF(nn.Module):
         self.register_buffer('user_sim_adj', 
                            user_adj / torch.sqrt(user_row_sums) / torch.sqrt(user_col_sums))
         
-        print(f"    User adjacency: {(user_adj > 0).sum().item():.0f} edges")
+        print(f"    User adjacency: {(user_adj > 0).sum().item():.0f} edges, "
+              f"avg degree: {(user_adj > 0).sum().item() / self.n_users:.1f}")
         
         # Item-item similarity  
         print(f"  Computing item-item {self.similarity_type} similarity...")
@@ -143,15 +155,15 @@ class UniversalSpectralCF(nn.Module):
         self.register_buffer('item_sim_adj',
                            item_adj / torch.sqrt(item_row_sums) / torch.sqrt(item_col_sums))
         
-        print(f"    Item adjacency: {(item_adj > 0).sum().item():.0f} edges")
+        print(f"    Item adjacency: {(item_adj > 0).sum().item():.0f} edges, "
+              f"avg degree: {(item_adj > 0).sum().item() / self.n_items:.1f}")
         
         # Clean up
         del user_similarity, item_similarity, user_adj, item_adj
+        self._memory_cleanup()
     
     def _create_filter_from_design(self):
-        """Create filter based on selected design (UPDATED with new filters)"""
-        import filters as fl
-        
+        """Create filter based on selected design"""
         if self.filter_design == 'original':
             return fl.UniversalSpectralFilter(self.filter_order, self.init_filter)
         elif self.filter_design == 'basis':
@@ -179,25 +191,30 @@ class UniversalSpectralCF(nn.Module):
         if A.shape[0] <= chunk_size:
             return A @ B
         
+        print(f"    Using chunked computation (chunk_size={chunk_size})...")
         result_chunks = []
+        
         for i in range(0, A.shape[0], chunk_size):
             end_idx = min(i + chunk_size, A.shape[0])
             chunk_result = A[i:end_idx] @ B
             result_chunks.append(chunk_result)
+            
+            if i > 0:
+                torch.cuda.empty_cache() if torch.cuda.is_available() else None
         
         return torch.cat(result_chunks, dim=0)
     
     def _initialize_model(self):
-        """Initialize eigendecompositions and enhanced filters using DySimGCF-inspired similarity matrices"""
+        """Initialize eigendecompositions using DySimGCF-style similarity matrices"""
         start = time.time()
         
-        print(f"Computing DySimGCF-inspired eigendecompositions for filter type: {self.filter}")
+        print(f"Computing DySimGCF-style eigendecompositions for filter type: {self.filter}")
         
         # User eigendecomposition (on similarity-based adjacency)
         if self.filter in ['u', 'ui']:
             print("Processing user similarity-based adjacency...")
             
-            # Compute user similarity matrix
+            # Compute user similarity matrix using the precomputed adjacency
             user_sim_matrix = self._compute_similarity_chunked(
                 self.user_sim_adj, self.user_sim_adj.t(), chunk_size=1000
             )
@@ -207,22 +224,17 @@ class UniversalSpectralCF(nn.Module):
             
             try:
                 eigenvals, eigenvecs = eigsh(sp.csr_matrix(user_sim_np), k=k_user, which='LM')
-                self.register_buffer('user_pos_eigenvals', 
+                self.register_buffer('user_eigenvals', 
                                    torch.tensor(np.real(eigenvals), dtype=torch.float32))
-                self.register_buffer('user_pos_eigenvecs', 
+                self.register_buffer('user_eigenvecs', 
                                    torch.tensor(np.real(eigenvecs), dtype=torch.float32))
-                self.user_pos_filter = self._create_filter_from_design()
-                print(f"  User positive eigendecomposition: {k_user} components, max eigenval = {eigenvals.max():.4f}")
+                self.user_filter = self._create_filter_from_design()
+                print(f"  User eigendecomposition: {k_user} components, max eigenval = {eigenvals.max():.4f}")
             except Exception as e:
-                print(f"  User positive eigendecomposition failed: {e}")
-                self.register_buffer('user_pos_eigenvals', torch.ones(k_user))
-                self.register_buffer('user_pos_eigenvecs', torch.eye(self.n_users, k_user))
-                self.user_pos_filter = self._create_filter_from_design()
-            
-            # For compatibility, create dummy negative filter (not used)
-            self.user_neg_filter = self._create_filter_from_design()
-            self.register_buffer('user_neg_eigenvals', torch.ones(k_user))
-            self.register_buffer('user_neg_eigenvecs', torch.eye(self.n_users, k_user))
+                print(f"  User eigendecomposition failed: {e}")
+                self.register_buffer('user_eigenvals', torch.ones(k_user))
+                self.register_buffer('user_eigenvecs', torch.eye(self.n_users, k_user))
+                self.user_filter = self._create_filter_from_design()
             
             del user_sim_matrix, user_sim_np
             self._memory_cleanup()
@@ -231,7 +243,7 @@ class UniversalSpectralCF(nn.Module):
         if self.filter in ['i', 'ui']:
             print("Processing item similarity-based adjacency...")
             
-            # Compute item similarity matrix
+            # Compute item similarity matrix using the precomputed adjacency
             item_sim_matrix = self._compute_similarity_chunked(
                 self.item_sim_adj, self.item_sim_adj.t(), chunk_size=1000
             )
@@ -241,68 +253,49 @@ class UniversalSpectralCF(nn.Module):
             
             try:
                 eigenvals, eigenvecs = eigsh(sp.csr_matrix(item_sim_np), k=k_item, which='LM')
-                self.register_buffer('item_pos_eigenvals', 
+                self.register_buffer('item_eigenvals', 
                                    torch.tensor(np.real(eigenvals), dtype=torch.float32))
-                self.register_buffer('item_pos_eigenvecs', 
+                self.register_buffer('item_eigenvecs', 
                                    torch.tensor(np.real(eigenvecs), dtype=torch.float32))
-                self.item_pos_filter = self._create_filter_from_design()
-                print(f"  Item positive eigendecomposition: {k_item} components, max eigenval = {eigenvals.max():.4f}")
+                self.item_filter = self._create_filter_from_design()
+                print(f"  Item eigendecomposition: {k_item} components, max eigenval = {eigenvals.max():.4f}")
             except Exception as e:
-                print(f"  Item positive eigendecomposition failed: {e}")
-                self.register_buffer('item_pos_eigenvals', torch.ones(k_item))
-                self.register_buffer('item_pos_eigenvecs', torch.eye(self.n_items, k_item))
-                self.item_pos_filter = self._create_filter_from_design()
-            
-            # For compatibility, create dummy negative filter (not used)
-            self.item_neg_filter = self._create_filter_from_design()
-            self.register_buffer('item_neg_eigenvals', torch.ones(k_item))
-            self.register_buffer('item_neg_eigenvecs', torch.eye(self.n_items, k_item))
+                print(f"  Item eigendecomposition failed: {e}")
+                self.register_buffer('item_eigenvals', torch.ones(k_item))
+                self.register_buffer('item_eigenvecs', torch.eye(self.n_items, k_item))
+                self.item_filter = self._create_filter_from_design()
             
             del item_sim_matrix, item_sim_np
             self._memory_cleanup()
         
         # Set combination weights as nn.Parameter (trainable)
         if self.filter == 'u':
-            # direct + user_sim (no negative component)
-            self.combination_weights = nn.Parameter(torch.tensor([0.6, 0.4, 0.0]))  # [direct, user_pos, user_neg(unused)]
+            # direct + user_sim  
+            self.combination_weights = nn.Parameter(torch.tensor([0.6, 0.4]))
         elif self.filter == 'i':
-            # direct + item_sim (no negative component)  
-            self.combination_weights = nn.Parameter(torch.tensor([0.6, 0.4, 0.0]))  # [direct, item_pos, item_neg(unused)]
+            # direct + item_sim
+            self.combination_weights = nn.Parameter(torch.tensor([0.6, 0.4]))
         else:  # 'ui'
-            # direct + item_sim + user_sim (no negative components)
-            self.combination_weights = nn.Parameter(torch.tensor([0.5, 0.3, 0.0, 0.2, 0.0]))  # [direct, item_pos, item_neg(unused), user_pos, user_neg(unused)]
+            # direct + item_sim + user_sim
+            self.combination_weights = nn.Parameter(torch.tensor([0.5, 0.3, 0.2]))
         
         end = time.time()
-        print(f'Enhanced initialization time for DySimGCF-inspired Universal-SpectralCF ({self.filter}): {end-start:.2f}s')
+        print(f'DySimGCF-style initialization time for Universal-SpectralCF ({self.filter}): {end-start:.2f}s')
     
     def _get_filter_matrices(self):
-        """Compute filter matrices for both positive and negative similarities"""
-        user_pos_matrix = None
-        user_neg_matrix = None
-        item_pos_matrix = None
-        item_neg_matrix = None
+        """Compute filter matrices for similarity-based adjacencies"""
+        user_matrix = None
+        item_matrix = None
         
-        if self.filter in ['u', 'ui']:
-            if self.user_pos_filter is not None:
-                user_pos_filter_response = self.user_pos_filter(self.user_pos_eigenvals)
-                user_pos_matrix = self.user_pos_eigenvecs @ torch.diag(user_pos_filter_response) @ self.user_pos_eigenvecs.t()
-            
-            # Negative matrix not used in DySimGCF approach, but kept for compatibility
-            if self.user_neg_filter is not None:
-                user_neg_filter_response = self.user_neg_filter(self.user_neg_eigenvals)
-                user_neg_matrix = self.user_neg_eigenvecs @ torch.diag(user_neg_filter_response) @ self.user_neg_eigenvecs.t()
+        if self.filter in ['u', 'ui'] and self.user_filter is not None:
+            user_filter_response = self.user_filter(self.user_eigenvals)
+            user_matrix = self.user_eigenvecs @ torch.diag(user_filter_response) @ self.user_eigenvecs.t()
         
-        if self.filter in ['i', 'ui']:
-            if self.item_pos_filter is not None:
-                item_pos_filter_response = self.item_pos_filter(self.item_pos_eigenvals)
-                item_pos_matrix = self.item_pos_eigenvecs @ torch.diag(item_pos_filter_response) @ self.item_pos_eigenvecs.t()
-            
-            # Negative matrix not used in DySimGCF approach, but kept for compatibility
-            if self.item_neg_filter is not None:
-                item_neg_filter_response = self.item_neg_filter(self.item_neg_eigenvals)
-                item_neg_matrix = self.item_neg_eigenvecs @ torch.diag(item_neg_filter_response) @ self.item_neg_eigenvecs.t()
+        if self.filter in ['i', 'ui'] and self.item_filter is not None:
+            item_filter_response = self.item_filter(self.item_eigenvals)
+            item_matrix = self.item_eigenvecs @ torch.diag(item_filter_response) @ self.item_eigenvecs.t()
         
-        return user_pos_matrix, user_neg_matrix, item_pos_matrix, item_neg_matrix
+        return user_matrix, item_matrix
     
     def forward(self, users):
         """Clean forward pass - ONLY returns predictions"""
@@ -310,54 +303,42 @@ class UniversalSpectralCF(nn.Module):
         direct_scores = user_profiles
         
         # Get filter matrices
-        user_pos_matrix, user_neg_matrix, item_pos_matrix, item_neg_matrix = self._get_filter_matrices()
+        user_matrix, item_matrix = self._get_filter_matrices()
         
         # Compute scores based on filter type
         if self.filter == 'u':
-            # User-based filtering with DySimGCF-inspired similarity
-            user_pos_filter_rows = user_pos_matrix[users]
-            user_pos_scores = user_pos_filter_rows @ self.adj_tensor
-            
-            # Dummy negative scores (not used but kept for compatibility)
-            user_neg_scores = torch.zeros_like(user_pos_scores)
+            # User-based filtering with DySimGCF-style similarity
+            user_filter_rows = user_matrix[users]
+            user_scores = user_filter_rows @ self.adj_tensor
             
             weights = torch.softmax(self.combination_weights, dim=0)
-            predicted = weights[0] * direct_scores + weights[1] * user_pos_scores + weights[2] * user_neg_scores
+            predicted = weights[0] * direct_scores + weights[1] * user_scores
             
         elif self.filter == 'i':
-            # Item-based filtering with DySimGCF-inspired similarity
-            item_pos_scores = user_profiles @ item_pos_matrix
-            
-            # Dummy negative scores (not used but kept for compatibility)
-            item_neg_scores = torch.zeros_like(item_pos_scores)
+            # Item-based filtering with DySimGCF-style similarity
+            item_scores = user_profiles @ item_matrix
             
             weights = torch.softmax(self.combination_weights, dim=0)
-            predicted = weights[0] * direct_scores + weights[1] * item_pos_scores + weights[2] * item_neg_scores
+            predicted = weights[0] * direct_scores + weights[1] * item_scores
             
         else:  # 'ui'
-            # Combined user and item filtering with DySimGCF-inspired similarities
-            item_pos_scores = user_profiles @ item_pos_matrix
-            user_pos_filter_rows = user_pos_matrix[users]
-            user_pos_scores = user_pos_filter_rows @ self.adj_tensor
-            
-            # Dummy negative scores (not used but kept for compatibility)
-            item_neg_scores = torch.zeros_like(item_pos_scores)
-            user_neg_scores = torch.zeros_like(user_pos_scores)
+            # Combined user and item filtering with DySimGCF-style similarities
+            item_scores = user_profiles @ item_matrix
+            user_filter_rows = user_matrix[users]
+            user_scores = user_filter_rows @ self.adj_tensor
             
             weights = torch.softmax(self.combination_weights, dim=0)
             predicted = (weights[0] * direct_scores + 
-                        weights[1] * item_pos_scores + 
-                        weights[2] * item_neg_scores + 
-                        weights[3] * user_pos_scores + 
-                        weights[4] * user_neg_scores)
+                        weights[1] * item_scores + 
+                        weights[2] * user_scores)
         
         # Memory cleanup for large datasets
         if self.training and (self.n_users > 10000 or self.n_items > 10000):
-            del user_pos_matrix, user_neg_matrix, item_pos_matrix, item_neg_matrix
+            del user_matrix, item_matrix
             self._memory_cleanup()
         
         return predicted  # ALWAYS return predictions only!
-    
+        
     def getUsersRating(self, batch_users):
         """Memory-efficient evaluation interface"""
         self.eval()
@@ -365,64 +346,58 @@ class UniversalSpectralCF(nn.Module):
             if isinstance(batch_users, np.ndarray):
                 batch_users = torch.LongTensor(batch_users)
             
-            result = self.forward(batch_users).cpu().numpy()
+            # Use simplified forward pass
+            combined = self.forward(batch_users)
+            result = combined.cpu().numpy()
+            
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
             return result
     
     def get_filter_parameters(self):
         """Get filter parameters for separate optimization"""
         filter_params = []
-        if self.user_pos_filter is not None:
-            filter_params.extend(self.user_pos_filter.parameters())
-        if self.user_neg_filter is not None:
-            filter_params.extend(self.user_neg_filter.parameters())
-        if self.item_pos_filter is not None:
-            filter_params.extend(self.item_pos_filter.parameters())
-        if self.item_neg_filter is not None:
-            filter_params.extend(self.item_neg_filter.parameters())
+        if self.user_filter is not None:
+            filter_params.extend(self.user_filter.parameters())
+        if self.item_filter is not None:
+            filter_params.extend(self.item_filter.parameters())
         return filter_params
     
     def get_other_parameters(self):
         """Get non-filter parameters"""
         filter_param_ids = {id(p) for p in self.get_filter_parameters()}
         return [p for p in self.parameters() if id(p) not in filter_param_ids]
-    
+
     def debug_filter_learning(self):
-        """Enhanced debug for different filter designs with DySimGCF-inspired similarities"""
-        print(f"\n=== FILTER LEARNING DEBUG (DYSIMGCF-INSPIRED) - {self.filter_design.upper()} ===")
+        """Enhanced debug for different filter designs with DySimGCF-style similarities"""
+        print(f"\n=== FILTER LEARNING DEBUG (DYSIMGCF-STYLE) - {self.filter_design.upper()} ===")
         print(f"Similarity: {self.similarity_type}, Top-K Users: {self.k_users}, Items: {self.k_items}")
         
         with torch.no_grad():
-            if self.filter in ['u', 'ui']:
-                if self.user_pos_filter is not None:
-                    print(f"\n👤 User Similarity Filter ({self.filter_design}):")
-                    self._debug_single_filter(self.user_pos_filter, "User Positive")
-                
-                # Note: user_neg_filter exists but is not used (dummy for compatibility)
+            if self.filter in ['u', 'ui'] and self.user_filter is not None:
+                print(f"\n👤 User Similarity Filter ({self.filter_design}):")
+                self._debug_single_filter(self.user_filter, "User")
             
-            if self.filter in ['i', 'ui']:
-                if self.item_pos_filter is not None:
-                    print(f"\n🎬 Item Similarity Filter ({self.filter_design}):")
-                    self._debug_single_filter(self.item_pos_filter, "Item Positive")
-                
-                # Note: item_neg_filter exists but is not used (dummy for compatibility)
+            if self.filter in ['i', 'ui'] and self.item_filter is not None:
+                print(f"\n🎬 Item Similarity Filter ({self.filter_design}):")
+                self._debug_single_filter(self.item_filter, "Item")
             
             # Combination weights
             weights = torch.softmax(self.combination_weights, dim=0)
             weight_names = {
-                'u': ['Direct', 'UserSim', 'User-(unused)'],
-                'i': ['Direct', 'ItemSim', 'Item-(unused)'],
-                'ui': ['Direct', 'ItemSim', 'Item-(unused)', 'UserSim', 'User-(unused)']
+                'u': ['Direct', 'UserSim'],
+                'i': ['Direct', 'ItemSim'],
+                'ui': ['Direct', 'ItemSim', 'UserSim']
             }
             print(f"\n🔗 Combination Weights:")
             for i, (name, weight) in enumerate(zip(weight_names[self.filter], weights)):
-                print(f"  {name:14}: {weight.cpu().item():.4f}")
+                print(f"  {name:10}: {weight.cpu().item():.4f}")
         
         print("=== END DEBUG ===\n")
     
     def _debug_single_filter(self, filter_obj, filter_name):
-        """Debug individual filter based on its type (UPDATED with new filters)"""
-        import filters as fl
-        
+        """Debug individual filter based on its type"""
         if isinstance(filter_obj, fl.UniversalSpectralFilter):
             init_coeffs = filter_obj.init_coeffs.cpu().numpy()
             current_coeffs = filter_obj.coeffs.cpu().numpy()
