@@ -1,7 +1,7 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
-ENHANCED WITH MULTIPLE FILTER DESIGNS AND CLOSED-FORM RANKING-AWARE NEGATIVE SIMILARITY
+ENHANCED WITH MULTIPLE FILTER DESIGNS: Original, Basis, Adaptive, Neural, Deep, MultiScale, Ensemble
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -19,7 +19,7 @@ import filters as fl
 
 class UniversalSpectralCF(nn.Module):
     """
-    Universal Spectral CF with Positive and Ranking-Aware Negative Similarities
+    Universal Spectral CF with Positive and Negative Similarities
     Enhanced with multiple filter designs from filters.py
     """
     def __init__(self, adj_mat, config=None):
@@ -37,13 +37,8 @@ class UniversalSpectralCF(nn.Module):
         self.filter_design = self.config.get('filter_design', 'basis')
         self.init_filter = self.config.get('init_filter', 'smooth')
         
-        # NEW: Ranking strategy for negative similarity
-        # Options: 'popularity_aware', 'confidence_weighted', 'preference_contrast', 'anti_popular'
-        self.ranking_strategy = self.config.get('ranking_strategy', 'anti_popular')
-        
         print(f"Model Double - Filter Design: {self.filter_design}")
         print(f"Model Double - Initialization: {self.init_filter}")
-        print(f"Model Double - Ranking Strategy: {self.ranking_strategy}")
         
         # Convert to tensor
         if sp.issparse(self.adj_mat):
@@ -59,8 +54,14 @@ class UniversalSpectralCF(nn.Module):
         col_sums = self.adj_tensor.sum(dim=0, keepdim=True) + 1e-8
         self.register_buffer('norm_adj', self.adj_tensor / torch.sqrt(row_sums) / torch.sqrt(col_sums))
         
-        # NEW: Create ranking-aware negative similarity matrix
-        self._create_ranking_aware_negative_matrix()
+        # Create binary interaction matrix for negative similarities
+        binary_adj = (self.adj_tensor > 0).float()
+        complement_adj = 1 - binary_adj
+        
+        # Normalize complement matrix for negative similarities
+        neg_row_sums = complement_adj.sum(dim=1, keepdim=True) + 1e-8
+        neg_col_sums = complement_adj.sum(dim=0, keepdim=True) + 1e-8
+        self.register_buffer('neg_norm_adj', complement_adj / torch.sqrt(neg_row_sums) / torch.sqrt(neg_col_sums))
         
         # Enhanced filter modules (will be set in _initialize_model)
         self.user_pos_filter = None
@@ -69,167 +70,12 @@ class UniversalSpectralCF(nn.Module):
         self.item_neg_filter = None
         
         # Clean up intermediate variables
-        del adj_dense, row_sums, col_sums
+        del adj_dense, row_sums, col_sums, binary_adj, complement_adj, neg_row_sums, neg_col_sums
         self._memory_cleanup()
         
         # Initialize the model
         self._initialize_model()
     
-    def _create_ranking_aware_negative_matrix(self):
-        """Create ranking-aware negative similarity matrix that maintains closed-form property"""
-        
-        if self.ranking_strategy == 'popularity_aware':
-            self._create_popularity_aware_negative()
-        elif self.ranking_strategy == 'confidence_weighted':
-            self._create_confidence_weighted_negative()
-        elif self.ranking_strategy == 'preference_contrast':
-            self._create_preference_contrast_negative()
-        elif self.ranking_strategy == 'anti_popular':
-            self._create_anti_popular_negative()
-        else:
-            # Fallback to original (but improved) approach
-            self._create_improved_simple_negative()
-    
-    def _create_popularity_aware_negative(self):
-        """
-        Create negative matrix weighted by item popularity
-        Key insight: Not interacting with popular items is more informative
-        """
-        # Compute item popularity (how many users interacted with each item)
-        item_popularity = self.adj_tensor.sum(dim=0)  # Shape: [n_items]
-        max_popularity = item_popularity.max()
-        
-        # Normalize popularity to [0, 1]
-        normalized_popularity = item_popularity / (max_popularity + 1e-8)
-        
-        # Create binary interaction matrix
-        binary_adj = (self.adj_tensor > 0).float()
-        
-        # For non-interactions, weight by popularity
-        # Higher weight for popular items users didn't interact with
-        non_interaction_mask = 1 - binary_adj
-        popularity_weights = normalized_popularity.unsqueeze(0).expand(self.n_users, -1)
-        
-        # Create weighted negative matrix
-        # Scale down to avoid dominating positive signals
-        weighted_negative = non_interaction_mask * popularity_weights * 0.3
-        
-        # Normalize the weighted negative matrix
-        neg_row_sums = weighted_negative.sum(dim=1, keepdim=True) + 1e-8
-        neg_col_sums = weighted_negative.sum(dim=0, keepdim=True) + 1e-8
-        self.register_buffer('neg_norm_adj', weighted_negative / torch.sqrt(neg_row_sums) / torch.sqrt(neg_col_sums))
-        
-        print(f"  Popularity-aware negative: avg weight = {weighted_negative.mean().item():.6f}")
-    
-    def _create_confidence_weighted_negative(self):
-        """
-        Create negative matrix weighted by user/item confidence
-        Key insight: More active users/items provide more reliable negative signals
-        """
-        # User confidence based on activity
-        user_activity = self.adj_tensor.sum(dim=1, keepdim=True)
-        max_user_activity = user_activity.max()
-        user_confidence = torch.sqrt(user_activity / (max_user_activity + 1e-8))
-        
-        # Item confidence based on activity  
-        item_activity = self.adj_tensor.sum(dim=0, keepdim=True)
-        max_item_activity = item_activity.max()
-        item_confidence = torch.sqrt(item_activity / (max_item_activity + 1e-8))
-        
-        # Combined confidence matrix
-        confidence_matrix = user_confidence * item_confidence
-        
-        # Create weighted negative interactions
-        binary_adj = (self.adj_tensor > 0).float()
-        non_interactions = 1 - binary_adj
-        
-        # Weight non-interactions by confidence
-        weighted_negative = non_interactions * confidence_matrix * 0.2
-        
-        # Normalize
-        neg_row_sums = weighted_negative.sum(dim=1, keepdim=True) + 1e-8
-        neg_col_sums = weighted_negative.sum(dim=0, keepdim=True) + 1e-8
-        self.register_buffer('neg_norm_adj', weighted_negative / torch.sqrt(neg_row_sums) / torch.sqrt(neg_col_sums))
-        
-        print(f"  Confidence-weighted negative: avg confidence = {confidence_matrix.mean().item():.6f}")
-    
-    def _create_preference_contrast_negative(self):
-        """
-        Create negative matrix based on preference contrast
-        Key insight: Users who deviate from popular choices have distinct negative preferences
-        """
-        # Compute global item preferences (popularity distribution)
-        item_popularity = self.adj_tensor.sum(dim=0)
-        global_preference = item_popularity / (item_popularity.sum() + 1e-8)
-        
-        # User-specific preferences
-        user_totals = self.adj_tensor.sum(dim=1, keepdim=True) + 1e-8
-        user_preferences = self.adj_tensor / user_totals
-        
-        # Contrast: How much users deviate from global preferences
-        preference_contrast = torch.abs(user_preferences - global_preference.unsqueeze(0))
-        
-        # Create negative matrix: high contrast non-interactions are informative
-        binary_adj = (self.adj_tensor > 0).float()
-        non_interactions = 1 - binary_adj
-        
-        # Weight by preference contrast
-        weighted_negative = non_interactions * preference_contrast * 0.25
-        
-        # Normalize
-        neg_row_sums = weighted_negative.sum(dim=1, keepdim=True) + 1e-8
-        neg_col_sums = weighted_negative.sum(dim=0, keepdim=True) + 1e-8
-        self.register_buffer('neg_norm_adj', weighted_negative / torch.sqrt(neg_row_sums) / torch.sqrt(neg_col_sums))
-        
-        print(f"  Preference contrast negative: avg contrast = {preference_contrast.mean().item():.6f}")
-    
-    def _create_anti_popular_negative(self):
-        """
-        Create negative matrix focusing on anti-popular patterns
-        Key insight: Users similar by what popular items they both avoid
-        """
-        # Identify popular items (above median popularity)
-        item_popularity = self.adj_tensor.sum(dim=0)
-        popularity_threshold = item_popularity.median()
-        popular_items_mask = (item_popularity > popularity_threshold).float()
-        
-        # Create anti-popular matrix: focus on popular items not interacted with
-        binary_adj = (self.adj_tensor > 0).float()
-        popular_non_interactions = (1 - binary_adj) * popular_items_mask.unsqueeze(0)
-        
-        # Weight by how popular the avoided items are
-        popularity_weights = item_popularity / (item_popularity.max() + 1e-8)
-        weighted_anti_popular = popular_non_interactions * popularity_weights.unsqueeze(0) * 0.4
-        
-        # Normalize
-        neg_row_sums = weighted_anti_popular.sum(dim=1, keepdim=True) + 1e-8
-        neg_col_sums = weighted_anti_popular.sum(dim=0, keepdim=True) + 1e-8
-        self.register_buffer('neg_norm_adj', weighted_anti_popular / torch.sqrt(neg_row_sums) / torch.sqrt(neg_col_sums))
-        
-        print(f"  Anti-popular negative: {popular_items_mask.sum().item():.0f} popular items, avg weight = {weighted_anti_popular.mean().item():.6f}")
-    
-    def _create_improved_simple_negative(self):
-        """
-        Improved version of simple negative matrix (fallback)
-        """
-        # Create binary interaction matrix
-        binary_adj = (self.adj_tensor > 0).float()
-        
-        # Instead of all 1s, use exponentially decaying weights based on item frequency
-        item_popularity = self.adj_tensor.sum(dim=0)
-        # Less popular items get higher negative weights when not chosen
-        negative_weights = torch.exp(-item_popularity / (item_popularity.mean() + 1e-8))
-        
-        # Apply to non-interactions
-        complement_adj = (1 - binary_adj) * negative_weights.unsqueeze(0) * 0.2
-        
-        # Normalize complement matrix for negative similarities
-        neg_row_sums = complement_adj.sum(dim=1, keepdim=True) + 1e-8
-        neg_col_sums = complement_adj.sum(dim=0, keepdim=True) + 1e-8
-        self.register_buffer('neg_norm_adj', complement_adj / torch.sqrt(neg_row_sums) / torch.sqrt(neg_col_sums))
-        
-        print(f"  Improved simple negative: avg weight = {complement_adj.mean().item():.6f}")
-
     def _memory_cleanup(self):
         """Force memory cleanup"""
         gc.collect()
@@ -279,18 +125,18 @@ class UniversalSpectralCF(nn.Module):
         return torch.cat(result_chunks, dim=0)
     
     def _initialize_model(self):
-        """Initialize eigendecompositions and enhanced filters for both positive and ranking-aware negative similarities"""
+        """Initialize eigendecompositions and enhanced filters for both positive and negative similarities"""
         start = time.time()
         
-        print(f"Computing positive and ranking-aware negative eigendecompositions for filter type: {self.filter}")
+        print(f"Computing positive and negative eigendecompositions for filter type: {self.filter}")
         
         # Compute positive similarity matrices
         print("Computing positive similarity matrices...")
         user_pos_sim = self._compute_similarity_chunked(self.norm_adj, self.norm_adj.t(), chunk_size=1000)
         item_pos_sim = self._compute_similarity_chunked(self.norm_adj.t(), self.norm_adj, chunk_size=1000)
         
-        # Compute ranking-aware negative similarity matrices
-        print(f"Computing ranking-aware negative similarity matrices (strategy: {self.ranking_strategy})...")
+        # Compute negative similarity matrices
+        print("Computing negative similarity matrices...")
         user_neg_sim = self._compute_similarity_chunked(self.neg_norm_adj, self.neg_norm_adj.t(), chunk_size=1000)
         item_neg_sim = self._compute_similarity_chunked(self.neg_norm_adj.t(), self.neg_norm_adj, chunk_size=1000)
         
@@ -305,7 +151,7 @@ class UniversalSpectralCF(nn.Module):
                 self.register_buffer('user_pos_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
                 self.register_buffer('user_pos_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
                 self.user_pos_filter = self._create_filter_from_design()
-                print(f"User positive eigendecomposition: {k_user} components, max eigenval = {eigenvals.max():.4f}")
+                print(f"User positive eigendecomposition: {k_user} components")
             except Exception as e:
                 print(f"User positive eigendecomposition failed: {e}")
                 self.register_buffer('user_pos_eigenvals', torch.ones(k_user))
@@ -315,15 +161,15 @@ class UniversalSpectralCF(nn.Module):
             del user_pos_sim_np
             self._memory_cleanup()
             
-            print(f"Processing user ranking-aware negative similarities...")
-            # Ranking-aware negative user similarities
+            print("Processing user negative similarities...")
+            # Negative user similarities
             user_neg_sim_np = user_neg_sim.cpu().numpy()
             try:
                 eigenvals, eigenvecs = eigsh(sp.csr_matrix(user_neg_sim_np), k=k_user, which='LM')
                 self.register_buffer('user_neg_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
                 self.register_buffer('user_neg_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
                 self.user_neg_filter = self._create_filter_from_design()
-                print(f"User negative eigendecomposition: {k_user} components, max eigenval = {eigenvals.max():.4f}")
+                print(f"User negative eigendecomposition: {k_user} components")
             except Exception as e:
                 print(f"User negative eigendecomposition failed: {e}")
                 self.register_buffer('user_neg_eigenvals', torch.ones(k_user))
@@ -344,7 +190,7 @@ class UniversalSpectralCF(nn.Module):
                 self.register_buffer('item_pos_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
                 self.register_buffer('item_pos_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
                 self.item_pos_filter = self._create_filter_from_design()
-                print(f"Item positive eigendecomposition: {k_item} components, max eigenval = {eigenvals.max():.4f}")
+                print(f"Item positive eigendecomposition: {k_item} components")
             except Exception as e:
                 print(f"Item positive eigendecomposition failed: {e}")
                 self.register_buffer('item_pos_eigenvals', torch.ones(k_item))
@@ -354,15 +200,15 @@ class UniversalSpectralCF(nn.Module):
             del item_pos_sim_np
             self._memory_cleanup()
             
-            print(f"Processing item ranking-aware negative similarities...")
-            # Ranking-aware negative item similarities
+            print("Processing item negative similarities...")
+            # Negative item similarities
             item_neg_sim_np = item_neg_sim.cpu().numpy()
             try:
                 eigenvals, eigenvecs = eigsh(sp.csr_matrix(item_neg_sim_np), k=k_item, which='LM')
                 self.register_buffer('item_neg_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
                 self.register_buffer('item_neg_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
                 self.item_neg_filter = self._create_filter_from_design()
-                print(f"Item negative eigendecomposition: {k_item} components, max eigenval = {eigenvals.max():.4f}")
+                print(f"Item negative eigendecomposition: {k_item} components")
             except Exception as e:
                 print(f"Item negative eigendecomposition failed: {e}")
                 self.register_buffer('item_neg_eigenvals', torch.ones(k_item))
@@ -379,16 +225,16 @@ class UniversalSpectralCF(nn.Module):
         # Set combination weights as nn.Parameter (trainable)
         if self.filter == 'u':
             # direct + user_pos + user_neg
-            self.combination_weights = nn.Parameter(torch.tensor([0.4, 0.35, 0.25]))
+            self.combination_weights = nn.Parameter(torch.tensor([0.4, 0.3, 0.3]))
         elif self.filter == 'i':
             # direct + item_pos + item_neg
-            self.combination_weights = nn.Parameter(torch.tensor([0.4, 0.35, 0.25]))
+            self.combination_weights = nn.Parameter(torch.tensor([0.4, 0.3, 0.3]))
         else:  # 'ui'
             # direct + item_pos + item_neg + user_pos + user_neg
-            self.combination_weights = nn.Parameter(torch.tensor([0.3, 0.22, 0.18, 0.18, 0.12]))
+            self.combination_weights = nn.Parameter(torch.tensor([0.3, 0.2, 0.2, 0.15, 0.15]))
         
         end = time.time()
-        print(f'Enhanced initialization time for Universal-SpectralCF with ranking-aware pos/neg similarities ({self.filter}): {end-start:.2f}s')
+        print(f'Enhanced initialization time for Universal-SpectralCF with pos/neg similarities ({self.filter}): {end-start:.2f}s')
     
     def _get_filter_matrices(self):
         """Compute filter matrices for both positive and negative similarities"""
@@ -427,19 +273,18 @@ class UniversalSpectralCF(nn.Module):
         
         # Compute scores based on filter type
         if self.filter == 'u':
-            # User-based filtering with positive and ranking-aware negative similarities
+            # User-based filtering with positive and negative similarities
             user_pos_filter_rows = user_pos_matrix[users]
             user_pos_scores = user_pos_filter_rows @ self.adj_tensor
             
             user_neg_filter_rows = user_neg_matrix[users]
-            # Use the ranking-aware negative matrix instead of raw negative matrix
-            user_neg_scores = user_neg_filter_rows @ self.adj_tensor  # Apply negative filtering to positive data
+            user_neg_scores = user_neg_filter_rows @ self.neg_norm_adj
             
             weights = torch.softmax(self.combination_weights, dim=0)
             predicted = weights[0] * direct_scores + weights[1] * user_pos_scores + weights[2] * user_neg_scores
             
         elif self.filter == 'i':
-            # Item-based filtering with positive and ranking-aware negative similarities
+            # Item-based filtering with positive and negative similarities
             item_pos_scores = user_profiles @ item_pos_matrix
             item_neg_scores = user_profiles @ item_neg_matrix
             
@@ -447,7 +292,7 @@ class UniversalSpectralCF(nn.Module):
             predicted = weights[0] * direct_scores + weights[1] * item_pos_scores + weights[2] * item_neg_scores
             
         else:  # 'ui'
-            # Combined user and item filtering with positive and ranking-aware negative similarities
+            # Combined user and item filtering with positive and negative similarities
             item_pos_scores = user_profiles @ item_pos_matrix
             item_neg_scores = user_profiles @ item_neg_matrix
             
@@ -455,7 +300,7 @@ class UniversalSpectralCF(nn.Module):
             user_pos_scores = user_pos_filter_rows @ self.adj_tensor
             
             user_neg_filter_rows = user_neg_matrix[users]
-            user_neg_scores = user_neg_filter_rows @ self.adj_tensor
+            user_neg_scores = user_neg_filter_rows @ self.neg_norm_adj
             
             weights = torch.softmax(self.combination_weights, dim=0)
             predicted = (weights[0] * direct_scores + 
@@ -507,8 +352,7 @@ class UniversalSpectralCF(nn.Module):
 
     def debug_filter_learning(self):
         """Enhanced debug for different filter designs with pos/neg similarities"""
-        print(f"\n=== FILTER LEARNING DEBUG (RANKING-AWARE POS/NEG) - {self.filter_design.upper()} ===")
-        print(f"Ranking Strategy: {self.ranking_strategy}")
+        print(f"\n=== FILTER LEARNING DEBUG (POS/NEG) - {self.filter_design.upper()} ===")
         
         with torch.no_grad():
             if self.filter in ['u', 'ui']:
@@ -517,7 +361,7 @@ class UniversalSpectralCF(nn.Module):
                     self._debug_single_filter(self.user_pos_filter, "User Positive")
                 
                 if self.user_neg_filter is not None:
-                    print(f"\n👤 User Ranking-Aware Negative Filter ({self.filter_design}):")
+                    print(f"\n👤 User Negative Filter ({self.filter_design}):")
                     self._debug_single_filter(self.user_neg_filter, "User Negative")
             
             if self.filter in ['i', 'ui']:
@@ -526,7 +370,7 @@ class UniversalSpectralCF(nn.Module):
                     self._debug_single_filter(self.item_pos_filter, "Item Positive")
                 
                 if self.item_neg_filter is not None:
-                    print(f"\n🎬 Item Ranking-Aware Negative Filter ({self.filter_design}):")
+                    print(f"\n🎬 Item Negative Filter ({self.filter_design}):")
                     self._debug_single_filter(self.item_neg_filter, "Item Negative")
             
             # Combination weights
@@ -539,18 +383,6 @@ class UniversalSpectralCF(nn.Module):
             print(f"\n🔗 Combination Weights:")
             for i, (name, weight) in enumerate(zip(weight_names[self.filter], weights)):
                 print(f"  {name:8}: {weight.cpu().item():.4f}")
-            
-            # NEW: Show ranking strategy analysis
-            print(f"\n📊 Ranking Strategy Analysis ({self.ranking_strategy}):")
-            if hasattr(self, 'neg_norm_adj'):
-                neg_stats = {
-                    'density': (self.neg_norm_adj > 0).float().mean().item(),
-                    'mean_weight': self.neg_norm_adj.mean().item(),
-                    'max_weight': self.neg_norm_adj.max().item(),
-                    'std_weight': self.neg_norm_adj.std().item()
-                }
-                for stat_name, stat_val in neg_stats.items():
-                    print(f"  {stat_name:12}: {stat_val:.6f}")
         
         print("=== END DEBUG ===\n")
     
