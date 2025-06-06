@@ -32,10 +32,10 @@ def parse_args():
     parser.add_argument('--filter_order', type=int, default=5, help='polynomial order for spectral filters')
     
     # Filter design options
-    parser.add_argument('--filter_design', type=str, default='basis', 
+    parser.add_argument('--filter_design', type=str, default='enhanced_basis', 
                        choices=['original', 'basis', 'enhanced_basis', 'adaptive_golden', 'adaptive', 'neural', 'deep', 'multiscale', 'ensemble'],
                        help='Filter design: original (polynomial), basis (combination), enhanced_basis (performance-optimized), adaptive_golden (golden ratio variants), adaptive (eigenvalue-dependent), neural (MLP), deep (deep neural network), multiscale (multi-scale frequency bands), ensemble (ensemble of filter types)')
-    parser.add_argument('--init_filter', type=str, default='smooth',
+    parser.add_argument('--init_filter', type=str, default='butterworth',
                        help='Initial filter pattern from filters.py (e.g., smooth, golden_036, butterworth)')
     
     # DySimGCF-style parameters (for model_double)
