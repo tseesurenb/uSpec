@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
 '''
-Advanced Hyperparameter Search for High-Capacity Filter Designs
-Focuses on neural, deep, multiscale, and ensemble filters with sophisticated optimization
+Created on June 3, 2025
+PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
+DySimGCF-Style Implementation with True Similarity-Based Graph Construction
 
-Usage:
-python hyperparam_search.py [--dataset DATASET] [--filter_design DESIGN] [--strategy STRATEGY] [--budget BUDGET]
+@author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
 
 import os

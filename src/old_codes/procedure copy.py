@@ -434,7 +434,7 @@ def run_convergence_test(dataset, config):
             config_copy['filter_design'] = design
             config_copy['init_filter'] = init
             
-            from model_single import UniversalSpectralCF
+            from models.model_single import UniversalSpectralCF
             adj_mat = dataset.UserItemNet.tolil()
             model = UniversalSpectralCF(adj_mat, config_copy)
             

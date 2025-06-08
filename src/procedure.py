@@ -1,7 +1,7 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
-Minimal procedure focused on core optimization
+Fixed device handling in training procedure
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -40,12 +40,16 @@ class MSELoss:
             self.opt = torch.optim.Adam(model.parameters(), lr=base_lr, weight_decay=weight_decay)
     
     def train_step(self, users, target_ratings):
-        """Simple training step"""
+        """Simple training step with device consistency"""
         self.opt.zero_grad()
         predicted_ratings = self.model(users)
         
         if isinstance(predicted_ratings, np.ndarray):
             predicted_ratings = torch.from_numpy(predicted_ratings).to(world.device)
+        
+        # FIXED: Ensure both tensors are on the same device
+        if predicted_ratings.device != target_ratings.device:
+            target_ratings = target_ratings.to(predicted_ratings.device)
         
         loss = torch.mean((predicted_ratings - target_ratings) ** 2)
         loss.backward()
@@ -56,11 +60,16 @@ class MSELoss:
         self.opt.step()
         return loss.cpu().item()
 
-def create_target_ratings(dataset, users):
-    """Create target ratings from training data"""
+def create_target_ratings(dataset, users, device=None):
+    """Create target ratings from training data on specified device"""
+    if device is None:
+        device = world.device
+        
     batch_size = len(users)
     n_items = dataset.m_items
-    target_ratings = torch.zeros(batch_size, n_items)
+    
+    # FIXED: Create tensor directly on the target device
+    target_ratings = torch.zeros(batch_size, n_items, device=device)
     
     for i, user in enumerate(users):
         pos_items = dataset.allPos[user]
@@ -70,7 +79,7 @@ def create_target_ratings(dataset, users):
     return target_ratings
 
 def train_epoch(dataset, model, loss_class, epoch, config):
-    """Train for one epoch"""
+    """Train for one epoch with proper device handling"""
     model.train()
     n_users = dataset.n_users
     train_batch_size = config['train_u_batch_size']
@@ -95,8 +104,11 @@ def train_epoch(dataset, model, loss_class, epoch, config):
         end_idx = min(start_idx + train_batch_size, users_per_epoch)
         user_indices = sampled_users[start_idx:end_idx]
         
+        # FIXED: Ensure users tensor is on correct device
         users = torch.LongTensor(user_indices).to(world.device)
-        target_ratings = create_target_ratings(dataset, user_indices).to(world.device)
+        
+        # FIXED: Create target ratings on the same device as the model
+        target_ratings = create_target_ratings(dataset, user_indices, device=world.device)
         
         batch_loss = loss_class.train_step(users, target_ratings)
         total_loss += batch_loss
@@ -107,7 +119,7 @@ def train_epoch(dataset, model, loss_class, epoch, config):
     return total_loss / n_batches
 
 def evaluate(dataset, model, data_dict, config):
-    """Evaluate model on given data"""
+    """Evaluate model on given data with proper device handling"""
     if len(data_dict) == 0:
         return {'recall': np.zeros(len(world.topks)),
                 'precision': np.zeros(len(world.topks)),
@@ -133,12 +145,16 @@ def evaluate(dataset, model, data_dict, config):
             training_items = dataset.getUserPosItems(batch_users)
             ground_truth = [data_dict[u] for u in batch_users]
             
-            # Get model predictions
+            # FIXED: Ensure batch_users_gpu is on correct device
             batch_users_gpu = torch.LongTensor(batch_users).to(world.device)
             ratings = model.getUsersRating(batch_users_gpu)
             
             if isinstance(ratings, np.ndarray):
                 ratings = torch.from_numpy(ratings)
+            
+            # FIXED: Ensure ratings tensor is on CPU for processing
+            if ratings.device != torch.device('cpu'):
+                ratings = ratings.cpu()
             
             # Exclude training items
             for i, items in enumerate(training_items):
@@ -182,12 +198,13 @@ def compute_metrics(ground_truth, predictions):
             'ndcg': np.array(ndcg)}
 
 def train_and_evaluate(dataset, model, config):
-    """Complete training and evaluation pipeline"""
+    """Complete training and evaluation pipeline with device consistency"""
     
     print("="*60)
     print(f"🚀 STARTING UNIVERSAL SPECTRAL CF TRAINING")
     filter_design = getattr(model, 'filter_design', 'original').upper()
     print(f"   Filter Design: {filter_design}")
+    print(f"   Device: {world.device}")
     print("="*60)
     
     # Check validation availability
@@ -213,6 +230,9 @@ def train_and_evaluate(dataset, model, config):
     print(f"📊 Training: {dataset.trainDataSize:,} interactions")
     print(f"🎯 Config: {total_epochs} epochs, patience={patience}")
     
+    # FIXED: Ensure model is on correct device
+    model = model.to(world.device)
+    
     # Training loop
     training_start = time()
     
@@ -233,6 +253,7 @@ def train_and_evaluate(dataset, model, config):
             if current_ndcg > best_ndcg + min_delta:
                 best_ndcg = current_ndcg
                 best_epoch = epoch + 1
+                # FIXED: Save model state properly handling device
                 best_model_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
                 no_improvement = 0
                 
@@ -251,7 +272,9 @@ def train_and_evaluate(dataset, model, config):
     # Restore best model
     if best_model_state is not None:
         print(f"\n🔄 Restoring best model from epoch {best_epoch}")
+        # FIXED: Load state dict and move to correct device
         model.load_state_dict(best_model_state)
+        model = model.to(world.device)
     
     training_time = time() - training_start
     

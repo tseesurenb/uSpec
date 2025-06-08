@@ -1,24 +1,21 @@
 '''
-Created on June 3, 2025
+Created on June 7, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
-Updated with DySimGCF-style parameters for model_double
+Enhanced with model selection configuration
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
 
 import os
-from os.path import join
 import torch
 from parse import parse_args
 import multiprocessing
 
 args = parse_args()
 
-ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 config = {}
 all_dataset = ['lastfm', 'gowalla', 'yelp2018', 'amazon-book', 'ml-100k']
-all_models  = ['uspec']
+all_models = ['uspec']
 
 # Basic training parameters
 config['train_u_batch_size'] = args.train_u_batch_size
@@ -26,7 +23,6 @@ config['eval_u_batch_size'] = args.eval_u_batch_size
 config['dataset'] = args.dataset
 config['lr'] = args.lr
 config['decay'] = args.decay
-config['n_eigen'] = args.n_eigen
 config['epochs'] = args.epochs
 config['filter'] = args.filter
 config['filter_order'] = args.filter_order
@@ -37,23 +33,31 @@ config['min_delta'] = args.min_delta
 config['n_epoch_eval'] = args.n_epoch_eval
 config['m_type'] = args.m_type
 
-# Filter design options
+# Model selection
+config['model_type'] = args.model_type
+
+# Enhanced eigenvalue configuration with separate user/item counts
+config['n_eigen'] = args.n_eigen  # Legacy support
+config['u_n_eigen'] = args.u_n_eigen  # User eigenvalue count
+config['i_n_eigen'] = args.i_n_eigen  # Item eigenvalue count
+
+# Filter design options (only used with enhanced model)
 config['filter_design'] = args.filter_design
 config['init_filter'] = args.init_filter
-config['run_convergence_test'] = args.run_convergence_test
 
-# DySimGCF-style parameters (for model_double)
-config['u_sim'] = args.u_sim
-config['i_sim'] = args.i_sim
-config['u_K'] = args.u_K
-config['i_K'] = args.i_K
-config['self_loop'] = args.self_loop
+# Laplacian-specific configuration (legacy)
+config['use_laplacian'] = args.use_laplacian
+config['laplacian_type'] = args.laplacian_type
 
-# Backward compatibility (optional)
-config['u_batch'] = args.train_u_batch_size  # Alias for old code
-config['test_u_batch_size'] = args.eval_u_batch_size  # Alias for old code
+# Enhanced similarity-aware configuration (only used with enhanced model)
+config['use_similarity_norm'] = args.use_similarity_norm
+config['similarity_type'] = args.similarity_type
+config['similarity_threshold'] = args.similarity_threshold
+config['similarity_weight'] = args.similarity_weight
 
 device = torch.device('cuda' if torch.cuda.is_available() else "cpu")
+config['device'] = device  # Add device to config for model access
+
 CORES = multiprocessing.cpu_count() // 2
 seed = args.seed
 
@@ -67,15 +71,5 @@ if model_name not in all_models:
 TRAIN_epochs = args.epochs
 topks = eval(args.topks)
 
-def cprint(words : str):
+def cprint(words: str):
     print(f"\033[0;30;43m{words}\033[0m")
-
-logo = r"""
-██╗   ██╗███████╗██████╗ ███████╗ ██████╗
-██║   ██║██╔════╝██╔══██╗██╔════╝██╔════╝
-██║   ██║███████╗██████╔╝█████╗  ██║     
-██║   ██║╚════██║██╔═══╝ ██╔══╝  ██║     
-╚██████╔╝███████║██║     ███████╗╚██████╗
- ╚═════╝ ╚══════╝╚═╝     ╚══════╝ ╚═════╝
-                                         
-"""

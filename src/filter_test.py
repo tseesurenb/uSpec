@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
 '''
-CORRECTED Universal Filter Performance Tester
-Properly separates filter designs from initialization patterns
+Created on June 3, 2025
+PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
+DySimGCF-Style Implementation with True Similarity-Based Graph Construction
 
-Usage:
-python filter_test_corrected.py [--dataset DATASET] [--quick] [--verbose]
+@author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
 
 import os
