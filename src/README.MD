@@ -242,3 +242,22 @@ python main.py --model_type basic --dataset ml-100k --u_n_eigen 32 --i_n_eigen 4
 # Scale up to enhanced for final results
 python main.py --model_type enhanced --dataset ml-100k --u_n_eigen 48 --i_n_eigen 64 --filter_design enhanced_basis
 ```
+
+
+
+##### BEST of HYPERPARAMETERs
+
+FOR GOWALLA:
+
+python main.py \
+    --model_type basic \
+    --dataset gowalla \
+    --lr 0.001 \
+    --decay 0.01 \
+    --u_n_eigen 230 \
+    --i_n_eigen 180 \
+    --filter ui \
+    --filter_design enhanced_basis \
+    --init_filter smooth \
+    --epochs 50 \
+    --patience 10

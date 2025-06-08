@@ -1,7 +1,7 @@
 '''
 Created on June 3, 2025
 PyTorch Implementation of uSpec: Universal Spectral Collaborative Filtering
-Updated with separate u_n_eigen and i_n_eigen support
+Updated with separate u_n_eigen and i_n_eigen support + Comprehensive Caching
 
 @author: Tseesuren Batsuuri (tseesuren.batsuuri@hdr.mq.edu.au)
 '''
@@ -12,6 +12,9 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import eigsh
 import time
+import gc
+import os
+import pickle
 import world
 
 class UniversalSpectralFilter(nn.Module):
@@ -71,7 +74,7 @@ class UniversalSpectralCF(nn.Module):
         norm_adj = self.adj_tensor / torch.sqrt(row_sums) / torch.sqrt(col_sums)
         self.register_buffer('norm_adj', norm_adj)
         
-        print(f"🔧 Universal Spectral CF:")
+        print(f"🔧 Universal Spectral CF with Caching:")
         print(f"   └─ Dataset: {self.config.get('dataset', 'unknown')}")
         print(f"   └─ Users: {self.n_users:,}, Items: {self.n_items:,}")
         print(f"   └─ User eigenvalues (u_n_eigen): {self.u_n_eigen}")
@@ -104,36 +107,187 @@ class UniversalSpectralCF(nn.Module):
         print(f"   🤖 Using default eigenvalue counts: u_n_eigen={u_n_eigen}, i_n_eigen={i_n_eigen}")
         return u_n_eigen, i_n_eigen
     
+    def _get_cache_path(self, cache_type, filter_type=None):
+        """Generate cache file path with relevant parameters"""
+        cache_dir = "../cache"
+        os.makedirs(cache_dir, exist_ok=True)
+        
+        dataset = self.config.get('dataset', 'unknown')
+        
+        if filter_type:
+            if cache_type.startswith('similarity'):
+                # Similarity matrices only depend on dataset and data, not on eigen counts
+                filename = f"{dataset}_universal_{filter_type}_sim.pkl"
+            else:  # eigen
+                # Eigendecompositions depend on eigen counts and other parameters
+                filter_order = self.config.get('filter_order', 3)
+                filter_mode = self.config.get('filter', 'ui')
+                u_eigen = self.u_n_eigen
+                i_eigen = self.i_n_eigen
+                k_value = u_eigen if filter_type == 'user' else i_eigen
+                filename = f"{dataset}_universal_u{u_eigen}_i{i_eigen}_fo{filter_order}_{filter_mode}_{filter_type}_eigen_k{k_value}.pkl"
+        else:
+            # Other cache types
+            filter_order = self.config.get('filter_order', 3)
+            filter_mode = self.config.get('filter', 'ui')
+            u_eigen = self.u_n_eigen
+            i_eigen = self.i_n_eigen
+            filename = f"{dataset}_universal_u{u_eigen}_i{i_eigen}_fo{filter_order}_{filter_mode}_{cache_type}.pkl"
+            
+        return os.path.join(cache_dir, filename)
+    
+    def _save_to_cache(self, data, cache_path):
+        """Save data to cache file"""
+        try:
+            with open(cache_path, 'wb') as f:
+                pickle.dump(data, f)
+            print(f"    💾 Saved to {os.path.basename(cache_path)}")
+        except Exception as e:
+            print(f"    ⚠️ Cache save failed: {e}")
+    
+    def _load_from_cache(self, cache_path):
+        """Load data from cache file"""
+        try:
+            if os.path.exists(cache_path):
+                with open(cache_path, 'rb') as f:
+                    data = pickle.load(f)
+                print(f"    📂 Loaded {os.path.basename(cache_path)}")
+                return data
+        except Exception as e:
+            print(f"    ⚠️ Cache load failed: {e}")
+        return None
+    
+    def _memory_cleanup(self):
+        """Force memory cleanup"""
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    
     def _setup_filters(self):
         """Setup spectral filters with eigendecompositions"""
         print(f"Computing eigendecompositions for filter type: {self.filter}")
         start = time.time()
         
-        # Compute similarity matrices
-        user_sim = self.norm_adj @ self.norm_adj.t()
-        item_sim = self.norm_adj.t() @ self.norm_adj
-        
         # Initialize filters
-        self.user_filter = self._create_filter('user', user_sim, self.u_n_eigen) if self.filter in ['u', 'ui'] else None
-        self.item_filter = self._create_filter('item', item_sim, self.i_n_eigen) if self.filter in ['i', 'ui'] else None
+        self.user_filter = None
+        self.item_filter = None
+        
+        if self.filter in ['u', 'ui']:
+            print("Processing user-user similarity matrix...")
+            self.user_filter = self._create_filter('user')
+            self._memory_cleanup()
+        
+        if self.filter in ['i', 'ui']:
+            print("Processing item-item similarity matrix...")
+            self.item_filter = self._create_filter('item')
+            self._memory_cleanup()
         
         print(f'Filter setup completed in {time.time() - start:.2f}s')
     
-    def _create_filter(self, filter_type, similarity_matrix, n_eigen):
-        """Create filter with eigendecomposition using specified eigenvalue count"""
-        sim_np = similarity_matrix.cpu().numpy()
-        n_components = self.n_users if filter_type == 'user' else self.n_items
-        k = min(n_eigen, n_components - 2)
+    def _compute_similarity_matrix(self, interaction_matrix, cache_type=None):
+        """Compute similarity matrix with caching"""
         
-        try:
-            eigenvals, eigenvecs = eigsh(sp.csr_matrix(sim_np), k=k, which='LM')
-            self.register_buffer(f'{filter_type}_eigenvals', torch.tensor(np.real(eigenvals), dtype=torch.float32))
-            self.register_buffer(f'{filter_type}_eigenvecs', torch.tensor(np.real(eigenvecs), dtype=torch.float32))
-            print(f"  {filter_type.capitalize()} eigendecomposition: {k} components")
-        except Exception as e:
-            print(f"  {filter_type.capitalize()} eigendecomposition failed: {e}")
-            self.register_buffer(f'{filter_type}_eigenvals', torch.ones(min(n_eigen, n_components)))
-            self.register_buffer(f'{filter_type}_eigenvecs', torch.eye(n_components, min(n_eigen, n_components)))
+        # Try to load from cache first
+        if cache_type:
+            cache_path = self._get_cache_path('similarity', cache_type)
+            cached_data = self._load_from_cache(cache_path)
+            if cached_data is not None:
+                return cached_data.to(self.device)
+        
+        print(f"    Computing similarity matrix...")
+        
+        # Compute similarity matrix (using simple dot product similarity)
+        similarity = interaction_matrix @ interaction_matrix.t()
+        
+        # Normalize to get cosine similarity
+        norms = torch.norm(interaction_matrix, dim=1, keepdim=True) + 1e-8
+        similarity = similarity / (norms @ norms.t())
+        
+        # Ensure symmetry
+        similarity = (similarity + similarity.t()) / 2
+        
+        # Set diagonal to 1 (self-similarity)
+        similarity.fill_diagonal_(1.0)
+        result = torch.clamp(similarity, min=0.0, max=1.0)
+        
+        # Save to cache
+        if cache_type:
+            self._save_to_cache(result.cpu(), cache_path)
+        
+        return result
+    
+    def _create_filter(self, filter_type):
+        """Create filter with eigendecomposition using specified eigenvalue count"""
+        
+        # Use appropriate eigenvalue count
+        if filter_type == 'user':
+            n_eigen_to_use = self.u_n_eigen
+            n_components = self.n_users
+        else:
+            n_eigen_to_use = self.i_n_eigen
+            n_components = self.n_items
+        
+        # Try to load eigendecomposition from cache
+        eigen_cache_path = self._get_cache_path('eigen', filter_type)
+        cached_eigen = self._load_from_cache(eigen_cache_path)
+        
+        if cached_eigen is not None:
+            eigenvals, eigenvecs = cached_eigen
+            self.register_buffer(f'{filter_type}_eigenvals', eigenvals.to(self.device))
+            self.register_buffer(f'{filter_type}_eigenvecs', eigenvecs.to(self.device))
+            print(f"  {filter_type.capitalize()} eigendecomposition loaded from cache ({n_eigen_to_use} eigenvalues)")
+        else:
+            print(f"  Computing {filter_type} similarity matrix...")
+            
+            with torch.no_grad():
+                if filter_type == 'user':
+                    similarity_matrix = self._compute_similarity_matrix(self.norm_adj, cache_type='user')
+                else:  # item
+                    similarity_matrix = self._compute_similarity_matrix(self.norm_adj.t(), cache_type='item')
+            
+            print(f"  Computing eigendecomposition...")
+            sim_np = similarity_matrix.cpu().numpy()
+            
+            del similarity_matrix
+            self._memory_cleanup()
+            
+            k = min(n_eigen_to_use, n_components - 2)
+            
+            try:
+                print(f"  Computing {k} largest eigenvalues for {filter_type}...")
+                eigenvals, eigenvecs = eigsh(sp.csr_matrix(sim_np), k=k, which='LM')
+                
+                eigenvals_tensor = torch.tensor(np.real(eigenvals), dtype=torch.float32)
+                eigenvecs_tensor = torch.tensor(np.real(eigenvecs), dtype=torch.float32)
+                
+                # Save to cache
+                self._save_to_cache((eigenvals_tensor, eigenvecs_tensor), eigen_cache_path)
+                
+                # Register buffers
+                self.register_buffer(f'{filter_type}_eigenvals', eigenvals_tensor.to(self.device))
+                self.register_buffer(f'{filter_type}_eigenvecs', eigenvecs_tensor.to(self.device))
+                
+                print(f"  {filter_type.capitalize()} eigendecomposition: {k} components")
+                print(f"  Eigenvalue range: [{eigenvals.min():.4f}, {eigenvals.max():.4f}]")
+                
+            except Exception as e:
+                print(f"  {filter_type.capitalize()} eigendecomposition failed: {e}")
+                print(f"  Using fallback identity matrices...")
+                
+                eigenvals = np.ones(min(n_eigen_to_use, n_components))
+                eigenvals_tensor = torch.tensor(eigenvals, dtype=torch.float32)
+                eigenvecs_tensor = torch.eye(n_components, min(n_eigen_to_use, n_components))
+                
+                # Save fallback to cache
+                self._save_to_cache((eigenvals_tensor, eigenvecs_tensor), eigen_cache_path)
+                
+                self.register_buffer(f'{filter_type}_eigenvals', eigenvals_tensor.to(self.device))
+                self.register_buffer(f'{filter_type}_eigenvecs', eigenvecs_tensor.to(self.device))
+            
+            del sim_np
+            if 'eigenvals' in locals():
+                del eigenvals, eigenvecs
+            self._memory_cleanup()
         
         return UniversalSpectralFilter(self.filter_order)
     
@@ -183,6 +337,11 @@ class UniversalSpectralCF(nn.Module):
         weights = torch.softmax(self.combination_weights, dim=0)
         predicted = sum(w * score for w, score in zip(weights, scores))
         
+        # Memory cleanup for large datasets
+        if self.training and (self.n_users > 5000 or self.n_items > 5000):
+            del user_filter_matrix, item_filter_matrix
+            self._memory_cleanup()
+        
         return predicted  # ALWAYS return predictions only!
     
     def getUsersRating(self, batch_users):
@@ -196,7 +355,12 @@ class UniversalSpectralCF(nn.Module):
             if batch_users.device != self.device:
                 batch_users = batch_users.to(self.device)
             
-            return self.forward(batch_users).cpu().numpy()
+            result = self.forward(batch_users).cpu().numpy()
+            
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
+            return result
     
     def get_filter_parameters(self):
         """Get filter parameters for separate optimization"""
@@ -223,10 +387,91 @@ class UniversalSpectralCF(nn.Module):
             'combination': self.combination_weights.numel(),
             'other': total_params - filter_params
         }
+    
+    def clear_cache(self):
+        """Clear cache files for this dataset and configuration"""
+        cache_dir = "../cache"
+        if not os.path.exists(cache_dir):
+            return
+        
+        dataset = self.config.get('dataset', 'unknown')
+        
+        # Look for files matching this dataset
+        pattern_parts = [dataset, 'universal']
+        
+        removed_count = 0
+        for filename in os.listdir(cache_dir):
+            if all(part in filename for part in pattern_parts):
+                file_path = os.path.join(cache_dir, filename)
+                try:
+                    os.remove(file_path)
+                    print(f"🗑️ Removed: {filename}")
+                    removed_count += 1
+                except Exception as e:
+                    print(f"⚠️ Failed to remove {filename}: {e}")
+        
+        if removed_count == 0:
+            print("No matching cache files found")
+        else:
+            print(f"Removed {removed_count} cache files")
+    
+    def clear_similarity_cache(self):
+        """Clear only similarity matrix cache files (when changing similarity computation)"""
+        cache_dir = "../cache"
+        if not os.path.exists(cache_dir):
+            return
+        
+        dataset = self.config.get('dataset', 'unknown')
+        
+        # Look for similarity files only
+        pattern_parts = [dataset, 'universal', 'sim.pkl']
+        
+        removed_count = 0
+        for filename in os.listdir(cache_dir):
+            if all(part in filename for part in pattern_parts):
+                file_path = os.path.join(cache_dir, filename)
+                try:
+                    os.remove(file_path)
+                    print(f"🗑️ Removed similarity cache: {filename}")
+                    removed_count += 1
+                except Exception as e:
+                    print(f"⚠️ Failed to remove {filename}: {e}")
+        
+        if removed_count == 0:
+            print("No similarity cache files found")
+        else:
+            print(f"Removed {removed_count} similarity cache files")
+    
+    def clear_eigen_cache(self):
+        """Clear only eigendecomposition cache files (when changing eigen counts)"""
+        cache_dir = "../cache"
+        if not os.path.exists(cache_dir):
+            return
+        
+        dataset = self.config.get('dataset', 'unknown')
+        
+        # Look for eigen files only
+        pattern_parts = [dataset, 'universal', 'eigen']
+        
+        removed_count = 0
+        for filename in os.listdir(cache_dir):
+            if all(part in filename for part in pattern_parts):
+                file_path = os.path.join(cache_dir, filename)
+                try:
+                    os.remove(file_path)
+                    print(f"🗑️ Removed eigen cache: {filename}")
+                    removed_count += 1
+                except Exception as e:
+                    print(f"⚠️ Failed to remove {filename}: {e}")
+        
+        if removed_count == 0:
+            print("No eigen cache files found")
+        else:
+            print(f"Removed {removed_count} eigen cache files")
 
     def debug_filter_learning(self):
         """Debug what the filters are learning and identify filter patterns"""
-        print("\n=== FILTER LEARNING DEBUG ===")
+        print("\n=== FILTER LEARNING DEBUG (WITH CACHING) ===")
         
         # Known filter patterns for comparison
         filter_patterns = {
@@ -301,6 +546,11 @@ class UniversalSpectralCF(nn.Module):
                 return "band-pass/complex"
             else:
                 return "custom/mixed"
+        
+        print(f"Cache Status:")
+        print(f"  └─ Cache directory: ../cache")
+        print(f"  └─ User eigenvalues: {self.u_n_eigen} (cached separately)")
+        print(f"  └─ Item eigenvalues: {self.i_n_eigen} (cached separately)")
         
         with torch.no_grad():
             # Analyze user filter
